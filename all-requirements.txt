@@ -1,0 +1,4 @@
+argh==0.26.2
+polaris-vcs-service==0.0.1
+py==1.5.3
+pytest==2.9.2
