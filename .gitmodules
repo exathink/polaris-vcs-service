@@ -1,3 +1,24 @@
 [submodule "polaris-build"]
 	path = polaris-build
 	url = ../../polaris-common/polaris-build
+[submodule "polaris-integrations"]
+	path = polaris-integrations
+	url = ../../polaris-common/polaris-integrations
+[submodule "polaris-graphql"]
+	path = polaris-graphql
+	url = ../../polaris-common/polaris-graphql
+[submodule "polaris-flask"]
+	path = polaris-flask
+	url = ../../polaris-common/polaris-flask
+[submodule "polaris-common"]
+	path = polaris-common
+	url = ../../polaris-common/polaris-common
+[submodule "polaris-repos-db"]
+	path = polaris-repos-db
+	url = ../../polaris-dbapi/polaris-repos-db
+[submodule "polaris-auth-db"]
+	path = polaris-auth-db
+	url = ../../polaris-dbapi/polaris-auth-db
+[submodule "polaris-messaging"]
+	path = polaris-messaging
+	url = ../../polaris-common/polaris-messaging
