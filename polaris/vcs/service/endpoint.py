@@ -24,10 +24,10 @@ from polaris.vcs.service import graphql
 config_logging()
 
 
-class PolarisVCSService(PolarisSecuredService):
+class PolarisVcsService(PolarisSecuredService):
     def __init__(self, import_name, db_url, db_connect_timeout=30, models=None,
                  public_paths=None, **kwargs):
-        super(PolarisVCSService, self).__init__(
+        super(PolarisVcsService, self).__init__(
             import_name, db_url, db_connect_timeout,
             models=models,
             public_paths=public_paths,
@@ -37,7 +37,7 @@ class PolarisVCSService(PolarisSecuredService):
 
 
 config_provider = get_config_provider()
-app = PolarisVCSService(
+app = PolarisVcsService(
     __name__,
     db_url=config_provider.get('POLARIS_DB_URL'),
     public_paths=[
