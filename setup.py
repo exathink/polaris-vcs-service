@@ -36,7 +36,9 @@ setup(
     packages=[
         'polaris',
         'polaris.vcs',
-        'polaris.vcs.service'
+        'polaris.vcs.service',
+        'polaris.vcs.messaging',
+        'polaris.vcs.messaging.subscribers'
     ],
     url='',
     license = 'Commercial',
