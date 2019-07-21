@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="VcsDirectoryMappings">
+    <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/polaris-build" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/polaris-common" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/polaris-common-db" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/polaris-flask" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/polaris-flask/polaris-auth-db" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/polaris-integrations" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/polaris-integrations/polaris-common-db" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/polaris-integrations/polaris-graphql" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/polaris-integrations/polaris-messaging" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/polaris-integrations/polaris-messaging/pika-pool" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/polaris-integrations/polaris-utils" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/polaris-repos-db" vcs="Git" />
+  </component>
+</project>

@@ -2,3 +2,7 @@
 export BUILDER_IMAGE=${REGISTRY_POLARIS_BUILD_PATH}polaris-python-builder-db:latest
 export RELEASE_IMAGE=${REGISTRY_POLARIS_BUILD_PATH}polaris-python-release-db:latest
 export POLARIS_DB_IMAGE=${REGISTRY_POLARIS_BUILD_PATH}polaris-postgres:latest
+
+# Deployment settings
+export PACKAGE_DEPLOYABLE_BUILD_TARGETS="uwsgi-service polaris-vcs-service"
+export PACKAGE_DEPLOYABLE_IMAGE=polaris-vcs-service-deploy

@@ -15,7 +15,15 @@ services:
     depends_on:
       - polaris-db
 
-
+  polaris-vcs-service:
+    image: ${PACKAGE_DEPLOYABLE_IMAGE}
+    build:
+      dockerfile: docker/polaris-vcs-service-deploy/Dockerfile
+      context: .
+      args:
+        PACKAGE_UWSGI_IMAGE: ${PACKAGE_UWSGI_IMAGE}
+    ports:
+      - "8100:8100"
 
 
 

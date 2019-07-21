@@ -19,3 +19,6 @@
 [submodule "polaris-messaging"]
 	path = polaris-messaging
 	url = ../../polaris-common/polaris-messaging
+[submodule "polaris-common-db"]
+	path = polaris-common-db
+	url = ../../polaris-common/polaris-common-db
