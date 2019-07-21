@@ -37,11 +37,13 @@ setup(
         'polaris',
         'polaris.vcs',
         'polaris.vcs.service',
+        'polaris.vcs.service.graphql',
         'polaris.vcs.messaging',
         'polaris.vcs.messaging.subscribers',
         'polaris.vcs.messaging.tasks',
         'polaris.vcs.db',
-        'polaris.vcs.db.impl'
+        'polaris.vcs.db.impl',
+
     ],
     url='',
     license = 'Commercial',
