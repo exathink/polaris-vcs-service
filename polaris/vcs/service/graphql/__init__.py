@@ -10,13 +10,24 @@
 
 
 import graphene
+from polaris.integrations.graphql import IntegrationsQueryMixin, IntegrationsMutationsMixin
 
 
-class Query(graphene.ObjectType):
+class Query(
+    IntegrationsQueryMixin,
+    graphene.ObjectType
+):
     ping = graphene.String()
 
     def resolve_ping(self, info):
         return 'ok'
 
 
-schema = graphene.Schema(query=Query)
+class Mutation(
+    IntegrationsMutationsMixin,
+    graphene.ObjectType
+):
+    pass
+
+
+schema = graphene.Schema(query=Query, mutation=Mutation)
