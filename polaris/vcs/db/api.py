@@ -12,10 +12,21 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from polaris.common import db
 
+from .impl import commits, repositories
 
-from .impl import commits
+
+# Repositories
+def sync_repositories(organization_key, source_repositories):
+    try:
+        with db.orm_session() as session:
+            return repositories.sync_repositories(session, organization_key, source_repositories)
+    except SQLAlchemyError as exc:
+        return db.process_exception("Sync Repositories", exc)
+    except Exception as e:
+        return db.failure_message('Sync Repositories', e)
 
 
+# Commits
 def ack_commits_created(commit_keys):
     try:
         with db.create_session() as session:

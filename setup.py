@@ -43,6 +43,7 @@ setup(
         'polaris.vcs.messaging.tasks',
         'polaris.vcs.db',
         'polaris.vcs.db.impl',
+        'polaris.vcs.integrations',
 
     ],
     url='',

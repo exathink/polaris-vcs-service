@@ -1,0 +1,115 @@
+# -*- coding: utf-8 -*-
+
+# Copyright: © Exathink, LLC (2011-2018) All Rights Reserved
+
+# Unauthorized use or copying of this file and its contents, via any medium
+# is strictly prohibited. The work product in this file is proprietary and
+# confidential.
+
+# Author: Krishna Kumar
+
+import pytest
+from test.shared_fixtures import *
+from polaris.common.enums import VcsIntegrationTypes
+from polaris.utils.collections import dict_merge
+from polaris.vcs.db import api
+
+repositories_common_fields = dict(
+    name='New Test Repo',
+    url="https://foo.bar.com",
+    public=False,
+    vendor='git',
+    integration_type=VcsIntegrationTypes.github.value,
+    description="A fancy new repo",
+    source_id="10002",
+    properties=dict(
+        ssh_url='git@github.com:/foo.bar',
+        homepage='https://www.github.com',
+        default_branch='master',
+    )
+)
+
+
+@pytest.yield_fixture
+def setup_sync_repos(setup_org_repo, setup_connectors):
+    organization, _ = setup_org_repo
+    connectors = setup_connectors
+
+    yield organization.key, connectors
+
+
+class TestSyncGithubRepositories:
+
+    def it_imports_a_new_repository(self, setup_sync_repos):
+        organization_key, connectors = setup_sync_repos
+        connector_key = connectors['github']
+
+        source_repos = [
+            dict(
+                connector_key=connector_key,
+                **repositories_common_fields
+            )
+        ]
+
+        result = api.sync_repositories(organization_key, source_repos)
+        assert result['success']
+        assert len(result['repositories']) == 1
+        assert result['repositories'][0]['is_new']
+
+        assert db.connection().execute(f"select count(id) from repos.repositories "
+                                       f"where connector_key='{connector_key}'").scalar() == 1
+
+    def it_is_idempotent(self, setup_sync_repos):
+        organization_key, connectors = setup_sync_repos
+        connector_key = connectors['github']
+
+        source_repos = [
+            dict(
+                connector_key=connector_key,
+                **repositories_common_fields
+            )
+        ]
+
+        # import once
+        api.sync_repositories(organization_key, source_repos)
+
+        # import again
+        result = api.sync_repositories(organization_key, source_repos)
+        assert result['success']
+        assert len(result['repositories']) == 1
+        assert not result['repositories'][0]['is_new']
+        assert db.connection().execute(f"select count(id) from repos.repositories "
+                                       f"where connector_key='{connector_key}'").scalar() == 1
+
+
+    def it_updates_existing_repository_records(self, setup_sync_repos):
+        organization_key, connectors = setup_sync_repos
+        connector_key = connectors['github']
+
+        source_repos = [
+            dict(
+                connector_key=connector_key,
+                **repositories_common_fields
+            )
+        ]
+
+        # import once
+        api.sync_repositories(organization_key, source_repos)
+
+        source_repos = [
+            dict(
+                connector_key=connector_key,
+                **dict_merge(
+                    repositories_common_fields,
+                    dict(
+                        url='https://baz.com'
+                    )
+                )
+            )
+        ]
+
+        # import again
+        result = api.sync_repositories(organization_key, source_repos)
+        assert result['success']
+        assert db.connection().execute(f"select url from repos.repositories "
+                                       f"where connector_key='{connector_key}'").scalar() == 'https://baz.com'

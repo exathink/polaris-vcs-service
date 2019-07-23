@@ -15,11 +15,12 @@ from datetime import datetime
 from polaris.common import db
 from polaris.repos.db.model import Organization, Repository
 from polaris.repos.db.schema import commits,contributors, contributor_aliases
+from polaris.integrations.db import model as integrations_model
 
-
-test_organization_key = uuid.uuid4().hex
-test_repository_key = uuid.uuid4().hex
-test_contributor_key = uuid.uuid4().hex
+test_account_key = uuid.uuid4()
+test_organization_key = uuid.uuid4()
+test_repository_key = uuid.uuid4()
+test_contributor_key = uuid.uuid4()
 
 test_repository_name = 'test-repo'
 test_contributor_name = 'Joe Blow'
@@ -49,7 +50,7 @@ commit_common_fields = dict(
 
 
 @pytest.yield_fixture()
-def setup_org_repo():
+def setup_org_repo(setup_schema):
 
     with db.orm_session() as session:
         session.expire_on_commit=False
@@ -141,3 +142,28 @@ def setup_commits(setup_org_repo):
 
 
 
+@pytest.yield_fixture
+def setup_connectors(setup_schema):
+    github_connector_key = uuid.uuid4()
+
+    with db.orm_session() as session:
+        session.expire_on_commit = False
+        session.add(
+            integrations_model.Github(
+                key=github_connector_key,
+                name='test-github-connector',
+                base_url='https://api.github.com',
+                account_key=test_account_key,
+                organization_key=test_organization_key,
+                github_organization='exathink',
+                oauth_access_token='foobar',
+                state='enabled'
+            )
+        )
+
+
+    yield dict(
+        github=github_connector_key
+    )
+
+    db.connection().execute(f"delete from integrations.connectors")
