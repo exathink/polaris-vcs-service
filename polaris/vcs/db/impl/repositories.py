@@ -56,7 +56,7 @@ def sync_repositories(session, organization_key, source_repositories):
                     repositories,
                     and_(
                         repositories_temp.c.connector_key == repositories.c.connector_key,
-                        repositories.c.source_id == repositories.c.source_id
+                        repositories_temp.c.source_id == repositories.c.source_id
                     )
                 )
             )

@@ -113,3 +113,49 @@ class TestSyncGithubRepositories:
         assert result['success']
         assert db.connection().execute(f"select url from repos.repositories "
                                        f"where connector_key='{connector_key}'").scalar() == 'https://baz.com'
+
+    def it_processes_a_mix_of_new_and_existing_records(self, setup_sync_repos):
+        organization_key, connectors = setup_sync_repos
+        connector_key = connectors['github']
+
+        source_repos = [
+            dict(
+                connector_key=connector_key,
+                **repositories_common_fields
+            )
+        ]
+
+        # import once
+        api.sync_repositories(organization_key, source_repos)
+
+        source_repos = [
+            dict(
+                connector_key=connector_key,
+                **dict_merge(
+                    repositories_common_fields,
+                    dict(
+                        url='https://baz.com'
+                    )
+                )
+            ),
+            dict(
+                connector_key=connector_key,
+                **dict_merge(
+                    repositories_common_fields,
+                    dict(
+                        name='another new repo',
+                        url='https://ugh.io',
+                        source_id='10003'
+                    )
+                )
+            ),
+
+        ]
+
+        # import again
+        result = api.sync_repositories(organization_key, source_repos)
+        assert result['success']
+        assert len(result['repositories']) == 2
+        assert {repo['is_new'] for repo in result['repositories']} == {True, False}
+        assert db.connection().execute(f"select count(id) from repos.repositories "
+                                       f"where connector_key='{connector_key}'").scalar() == 2
