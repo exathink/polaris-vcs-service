@@ -16,10 +16,10 @@ from .impl import commits, repositories
 
 
 # Repositories
-def sync_repositories(organization_key, source_repositories):
+def sync_repositories(organization_key, connector_key, source_repositories):
     try:
         with db.orm_session() as session:
-            return repositories.sync_repositories(session, organization_key, source_repositories)
+            return repositories.sync_repositories(session, organization_key, connector_key, source_repositories)
     except SQLAlchemyError as exc:
         return db.process_exception("Sync Repositories", exc)
     except Exception as e:

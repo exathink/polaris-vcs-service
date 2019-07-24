@@ -23,4 +23,8 @@ def sync_repositories(connector_key, tracking_receipt_key=None):
                 error_info=f"Error refreshing repositories for {connector.name}"
         ):
             for source_repositories in connector.fetch_repositories_from_source():
-                yield polaris.vcs.db.api.sync_repositories(connector.organization_key, source_repositories)
+                yield polaris.vcs.db.api.sync_repositories(
+                    connector.organization_key,
+                    connector.key,
+                    source_repositories
+                )

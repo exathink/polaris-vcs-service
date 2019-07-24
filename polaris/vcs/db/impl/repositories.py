@@ -18,7 +18,7 @@ from polaris.repos.db.schema import repositories, RepositoryImportState
 from polaris.utils.exceptions import ProcessingException
 
 
-def sync_repositories(session, organization_key, source_repositories):
+def sync_repositories(session, organization_key, connector_key, source_repositories):
     if organization_key is not None:
         repositories_temp = db.temp_table_from(
             repositories,
@@ -40,6 +40,7 @@ def sync_repositories(session, organization_key, source_repositories):
                 dict(
                     key=uuid.uuid4(),
                     organization_key=organization_key,
+                    connector_key=connector_key,
                     import_state=RepositoryImportState.IMPORT_DISABLED,
                     import_ready_state=RepositoryImportState.IMPORT_READY,
                     update_ready_state=RepositoryImportState.UPDATE_READY,

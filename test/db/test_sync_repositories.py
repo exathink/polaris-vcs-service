@@ -14,28 +14,10 @@ from polaris.common.enums import VcsIntegrationTypes
 from polaris.utils.collections import dict_merge
 from polaris.vcs.db import api
 
-repositories_common_fields = dict(
-    name='New Test Repo',
-    url="https://foo.bar.com",
-    public=False,
-    vendor='git',
-    integration_type=VcsIntegrationTypes.github.value,
-    description="A fancy new repo",
-    source_id="10002",
-    properties=dict(
-        ssh_url='git@github.com:/foo.bar',
-        homepage='https://www.github.com',
-        default_branch='master',
-    )
-)
 
 
-@pytest.yield_fixture
-def setup_sync_repos(setup_org_repo, setup_connectors):
-    organization, _ = setup_org_repo
-    connectors = setup_connectors
 
-    yield organization.key, connectors
+
 
 
 class TestSyncGithubRepositories:
@@ -46,12 +28,11 @@ class TestSyncGithubRepositories:
 
         source_repos = [
             dict(
-                connector_key=connector_key,
                 **repositories_common_fields
             )
         ]
 
-        result = api.sync_repositories(organization_key, source_repos)
+        result = api.sync_repositories(organization_key, connector_key, source_repos)
         assert result['success']
         assert len(result['repositories']) == 1
         assert result['repositories'][0]['is_new']
@@ -65,16 +46,15 @@ class TestSyncGithubRepositories:
 
         source_repos = [
             dict(
-                connector_key=connector_key,
                 **repositories_common_fields
             )
         ]
 
         # import once
-        api.sync_repositories(organization_key, source_repos)
+        api.sync_repositories(organization_key, connector_key,  source_repos)
 
         # import again
-        result = api.sync_repositories(organization_key, source_repos)
+        result = api.sync_repositories(organization_key, connector_key, source_repos)
         assert result['success']
         assert len(result['repositories']) == 1
         assert not result['repositories'][0]['is_new']
@@ -88,17 +68,15 @@ class TestSyncGithubRepositories:
 
         source_repos = [
             dict(
-                connector_key=connector_key,
                 **repositories_common_fields
             )
         ]
 
         # import once
-        api.sync_repositories(organization_key, source_repos)
+        api.sync_repositories(organization_key, connector_key, source_repos)
 
         source_repos = [
             dict(
-                connector_key=connector_key,
                 **dict_merge(
                     repositories_common_fields,
                     dict(
@@ -109,7 +87,7 @@ class TestSyncGithubRepositories:
         ]
 
         # import again
-        result = api.sync_repositories(organization_key, source_repos)
+        result = api.sync_repositories(organization_key, connector_key, source_repos)
         assert result['success']
         assert db.connection().execute(f"select url from repos.repositories "
                                        f"where connector_key='{connector_key}'").scalar() == 'https://baz.com'
@@ -120,17 +98,15 @@ class TestSyncGithubRepositories:
 
         source_repos = [
             dict(
-                connector_key=connector_key,
                 **repositories_common_fields
             )
         ]
 
         # import once
-        api.sync_repositories(organization_key, source_repos)
+        api.sync_repositories(organization_key, connector_key, source_repos)
 
         source_repos = [
             dict(
-                connector_key=connector_key,
                 **dict_merge(
                     repositories_common_fields,
                     dict(
@@ -139,7 +115,6 @@ class TestSyncGithubRepositories:
                 )
             ),
             dict(
-                connector_key=connector_key,
                 **dict_merge(
                     repositories_common_fields,
                     dict(
@@ -153,7 +128,7 @@ class TestSyncGithubRepositories:
         ]
 
         # import again
-        result = api.sync_repositories(organization_key, source_repos)
+        result = api.sync_repositories(organization_key, connector_key,  source_repos)
         assert result['success']
         assert len(result['repositories']) == 2
         assert {repo['is_new'] for repo in result['repositories']} == {True, False}

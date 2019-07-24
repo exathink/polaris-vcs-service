@@ -22,7 +22,6 @@ class GithubRepositoriesConnector(GithubConnector):
 
     def map_repository_info(self, repo):
         return dict(
-            connector_key=self.key,
             name=repo.name,
             url=repo.html_url,
             public=not repo.private,

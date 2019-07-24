@@ -13,6 +13,7 @@ import pytest
 
 from datetime import datetime
 from polaris.common import db
+from polaris.common.enums import VcsIntegrationTypes
 from polaris.repos.db.model import Organization, Repository
 from polaris.repos.db.schema import commits,contributors, contributor_aliases
 from polaris.integrations.db import model as integrations_model
@@ -44,6 +45,21 @@ commit_common_fields = dict(
     ),
     created_at=datetime.utcnow()
 
+)
+
+repositories_common_fields = dict(
+    name='New Test Repo',
+    url="https://foo.bar.com",
+    public=False,
+    vendor='git',
+    integration_type=VcsIntegrationTypes.github.value,
+    description="A fancy new repo",
+    source_id="10002",
+    properties=dict(
+        ssh_url='git@github.com:/foo.bar',
+        homepage='https://www.github.com',
+        default_branch='master',
+    )
 )
 
 
@@ -167,3 +183,26 @@ def setup_connectors(setup_schema):
     )
 
     db.connection().execute(f"delete from integrations.connectors")
+
+
+repositories_common_fields = dict(
+    name='New Test Repo',
+    url="https://foo.bar.com",
+    public=False,
+    vendor='git',
+    integration_type=VcsIntegrationTypes.github.value,
+    description="A fancy new repo",
+    source_id="10002",
+    properties=dict(
+        ssh_url='git@github.com:/foo.bar',
+        homepage='https://www.github.com',
+        default_branch='master',
+    )
+)
+
+@pytest.yield_fixture
+def setup_sync_repos(setup_org_repo, setup_connectors):
+    organization, _ = setup_org_repo
+    connectors = setup_connectors
+
+    yield organization.key, connectors
