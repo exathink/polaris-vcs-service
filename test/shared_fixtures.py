@@ -20,7 +20,7 @@ from polaris.integrations.db import model as integrations_model
 test_account_key = uuid.uuid4()
 test_organization_key = uuid.uuid4()
 test_repository_key = uuid.uuid4()
-test_contributor_key = uuid.uuid4()
+test_contributor_key = uuid.uuid4().hex
 
 test_repository_name = 'test-repo'
 test_contributor_name = 'Joe Blow'
