@@ -14,7 +14,7 @@ from polaris.messaging.topics import TopicSubscriber, ConnectorsTopic, VcsTopic
 from polaris.messaging.messages import RepositoryUpdated, RepositoryCreated
 from polaris.vcs.messaging.messages import RefreshConnectorRepositories
 from polaris.messaging.utils import raise_message_processing_error
-
+from polaris.utils.exceptions import ProcessingException
 from polaris.vcs import commands
 
 
@@ -55,7 +55,7 @@ class ConnectorsTopicSubscriber(TopicSubscriber):
             yield from ConnectorsTopicSubscriber.sync_repositories(connector_key,
                                                                    tracking_receipt_key=tracking_receipt_key)
         except Exception as exc:
-            raise_message_processing_error(message, 'Failed to sync work items sources', str(exc))
+            raise_message_processing_error(message, 'Failed to sync repositories', str(exc))
 
     def publish_responses(self, created, created_messages, updated, updated_messages):
         if len(created) > 0:
@@ -83,16 +83,20 @@ class ConnectorsTopicSubscriber(TopicSubscriber):
 
     @staticmethod
     def sync_repositories(connector_key, tracking_receipt_key=None):
-        for repositories in commands.sync_repositories(
+        for result in commands.sync_repositories(
                 connector_key=connector_key,
                 tracking_receipt_key=tracking_receipt_key
         ):
-            created = []
-            updated = []
-            for repository in repositories:
-                if repository['is_new']:
-                    created.append(repository)
-                else:
-                    updated.append(repository)
+            if result['success']:
+                created = []
+                updated = []
+                for repository in result['repositories']:
+                    if repository['is_new']:
+                        created.append(repository)
+                    else:
+                        updated.append(repository)
 
-            yield created, updated
+                yield created, updated
+
+            else:
+                raise ProcessingException(f'Sync repositories failed for connector {connector_key}')

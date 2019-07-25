@@ -20,12 +20,6 @@ class TestSyncGithubRepositories:
         organization_key, connectors = setup_sync_repos
         connector_key = connectors['github']
 
-        source_repos = [
-            dict(
-                **repositories_common_fields
-            )
-        ]
-
         with patch(
                 'polaris.vcs.integrations.github.GithubRepositoriesConnector.fetch_repositories_from_source') as fetch_repos:
             fetch_repos.return_value = [
@@ -38,3 +32,4 @@ class TestSyncGithubRepositories:
             for result in commands.sync_repositories(connector_key):
                 assert result['success']
                 assert len(result['repositories']) == 1
+

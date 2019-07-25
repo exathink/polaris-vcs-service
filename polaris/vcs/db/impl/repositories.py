@@ -95,6 +95,7 @@ def sync_repositories(session, organization_key, connector_key, source_repositor
                     name=repository.name,
                     description=repository.description,
                     public=repository.public,
+                    organization_key=organization_key,
                 )
                 for repository in repositories_before_insert
             ])

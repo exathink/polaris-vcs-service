@@ -21,11 +21,14 @@ from polaris.integrations.db import model as integrations_model
 test_account_key = uuid.uuid4()
 test_organization_key = uuid.uuid4()
 test_repository_key = uuid.uuid4()
+test_repository_source_id = "1000"
+
 test_contributor_key = uuid.uuid4().hex
 
 test_repository_name = 'test-repo'
 test_contributor_name = 'Joe Blow'
 
+github_connector_key = uuid.uuid4()
 
 commit_common_fields = dict(
     commit_date=datetime.utcnow(),
@@ -76,9 +79,11 @@ def setup_org_repo(setup_schema):
             public=False
         )
         repository = Repository(
+                connector_key=github_connector_key,
                 organization_key=test_organization_key,
                 key=test_repository_key,
-                name=test_repository_name
+                name=test_repository_name,
+                source_id=test_repository_source_id,
             )
         organization.repositories.append(
             repository
@@ -160,7 +165,7 @@ def setup_commits(setup_org_repo):
 
 @pytest.yield_fixture
 def setup_connectors(setup_schema):
-    github_connector_key = uuid.uuid4()
+
 
     with db.orm_session() as session:
         session.expire_on_commit = False
