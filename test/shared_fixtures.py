@@ -84,6 +84,11 @@ def setup_org_repo(setup_schema):
                 key=test_repository_key,
                 name=test_repository_name,
                 source_id=test_repository_source_id,
+                import_state=0,
+                description='A neat new repo',
+                integration_type=VcsIntegrationTypes.github.value,
+                url='https://foo.bar.com'
+
             )
         organization.repositories.append(
             repository

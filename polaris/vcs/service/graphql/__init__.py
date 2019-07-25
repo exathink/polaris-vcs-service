@@ -11,18 +11,27 @@
 
 import graphene
 from polaris.integrations.graphql import IntegrationsQueryMixin, IntegrationsMutationsMixin
+from polaris.graphql.interfaces import NamedNode
 
 from .mutations import RefreshConnectorRepositories
+from .repository import Repository
+from .vcs_connector import VcsConnector
 
 
 class Query(
     IntegrationsQueryMixin,
     graphene.ObjectType
 ):
-    ping = graphene.String()
+    node = NamedNode.Field()
 
-    def resolve_ping(self, info):
-        return 'ok'
+    vcs_connector = VcsConnector.Field()
+    repository = Repository.Field()
+
+    def resolve_repository(self, info, **kwargs):
+        return Repository.resolve_field(info, **kwargs)
+
+    def resolve_vcs_connector(self, info, **kwargs):
+        return VcsConnector.resolve_field(info, **kwargs)
 
 
 class Mutation(
