@@ -14,7 +14,8 @@ from sqlalchemy import select, and_
 from sqlalchemy.dialects.postgresql import insert
 
 from polaris.common import db
-from polaris.repos.db.schema import repositories, RepositoryImportState
+from polaris.repos.db.model import repositories
+from polaris.repos.db.schema import RepositoryImportState
 from polaris.utils.exceptions import ProcessingException
 
 
@@ -30,7 +31,8 @@ def sync_repositories(session, organization_key, connector_key, source_repositor
                 repositories.c.commit_count,
                 repositories.c.earliest_commit,
                 repositories.c.latest_commit,
-                repositories.c.failures_since_last_checked
+                repositories.c.failures_since_last_checked,
+                repositories.c.organization_id
             ]
 
         )

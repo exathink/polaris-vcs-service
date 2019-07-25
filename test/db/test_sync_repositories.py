@@ -37,8 +37,10 @@ class TestSyncGithubRepositories:
         assert len(result['repositories']) == 1
         assert result['repositories'][0]['is_new']
 
+        #  Note that the setup process already creates one repo under this connector key. Thats why we have one
+        # extra here.
         assert db.connection().execute(f"select count(id) from repos.repositories "
-                                       f"where connector_key='{connector_key}'").scalar() == 1
+                                       f"where connector_key='{connector_key}'").scalar() == 2
 
     def it_is_idempotent(self, setup_sync_repos):
         organization_key, connectors = setup_sync_repos
@@ -58,8 +60,10 @@ class TestSyncGithubRepositories:
         assert result['success']
         assert len(result['repositories']) == 1
         assert not result['repositories'][0]['is_new']
+        #  Note that the setup process already creates one repo under this connector key. Thats why we have one
+        # extra here.
         assert db.connection().execute(f"select count(id) from repos.repositories "
-                                       f"where connector_key='{connector_key}'").scalar() == 1
+                                       f"where connector_key='{connector_key}'").scalar() == 2
 
 
     def it_updates_existing_repository_records(self, setup_sync_repos):
@@ -89,8 +93,8 @@ class TestSyncGithubRepositories:
         # import again
         result = api.sync_repositories(organization_key, connector_key, source_repos)
         assert result['success']
-        assert db.connection().execute(f"select url from repos.repositories "
-                                       f"where connector_key='{connector_key}'").scalar() == 'https://baz.com'
+        assert db.connection().execute(f"select count(id) from repos.repositories "
+                                       f"where connector_key='{connector_key}' and  url='https://baz.com'").scalar() == 1
 
     def it_processes_a_mix_of_new_and_existing_records(self, setup_sync_repos):
         organization_key, connectors = setup_sync_repos
@@ -132,5 +136,7 @@ class TestSyncGithubRepositories:
         assert result['success']
         assert len(result['repositories']) == 2
         assert {repo['is_new'] for repo in result['repositories']} == {True, False}
+        #  Note that the setup process already creates one repo under this connector key. Thats why we have one
+        # extra here.
         assert db.connection().execute(f"select count(id) from repos.repositories "
-                                       f"where connector_key='{connector_key}'").scalar() == 2
+                                       f"where connector_key='{connector_key}'").scalar() == 3

@@ -12,6 +12,8 @@
 import graphene
 from polaris.integrations.graphql import IntegrationsQueryMixin, IntegrationsMutationsMixin
 
+from .mutations import RefreshConnectorRepositories
+
 
 class Query(
     IntegrationsQueryMixin,
@@ -27,7 +29,7 @@ class Mutation(
     IntegrationsMutationsMixin,
     graphene.ObjectType
 ):
-    pass
+    refresh_connector_repositories = RefreshConnectorRepositories.Field()
 
 
 schema = graphene.Schema(query=Query, mutation=Mutation)

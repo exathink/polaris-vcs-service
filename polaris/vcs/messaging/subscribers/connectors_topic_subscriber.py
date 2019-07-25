@@ -59,7 +59,7 @@ class ConnectorsTopicSubscriber(TopicSubscriber):
 
     def publish_responses(self, created, created_messages, updated, updated_messages):
         if len(created) > 0:
-            logger.info(f"{len(updated)} repository created")
+            logger.info(f"{len(created)} new repositories were found")
             for repository in created:
                 created_message = RepositoryCreated(
                     send=dict(
