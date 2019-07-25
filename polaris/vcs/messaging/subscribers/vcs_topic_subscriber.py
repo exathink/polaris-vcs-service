@@ -8,7 +8,12 @@
 
 # Author: Krishna Kumar
 
+import logging
+
 from polaris.messaging.topics import TopicSubscriber, VcsTopic
+from polaris.vcs.messaging.messages import RefreshConnectorRepositories
+
+logger = logging.getLogger('polaris.vcs.messaging.vcs_topic_subscriber')
 
 
 class VcsTopicSubscriber(TopicSubscriber):
@@ -17,6 +22,7 @@ class VcsTopicSubscriber(TopicSubscriber):
             topic=VcsTopic(channel, create=True),
             subscriber_queue='vcs_vcs',
             message_classes=[
+                RefreshConnectorRepositories,
             ],
             publisher=publisher,
             exclusive=False
