@@ -7,10 +7,13 @@
 # confidential.
 
 # Author: Krishna Kumar
+
+from polaris.common import db
 import polaris.vcs.db.impl.repositories
 from polaris.vcs import connector_factory
 from polaris.integrations.db.api import tracking_receipt_updates
 from polaris.vcs.db import api
+from polaris.vcs.messaging import publish
 
 
 def sync_repositories(connector_key, tracking_receipt_key=None):
@@ -28,3 +31,12 @@ def sync_repositories(connector_key, tracking_receipt_key=None):
                     connector.key,
                     source_repositories
                 )
+
+
+def import_repositories(organization_key, repository_keys):
+    with db.orm_session():
+        result = api.import_repositories(organization_key, repository_keys)
+        if result['success']:
+            imported_repositories = result['repositories']
+            publish.repositories_imported(organization_key, imported_repositories)
+            return result['repositories']

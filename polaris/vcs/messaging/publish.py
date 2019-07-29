@@ -7,13 +7,13 @@
 # confidential.
 
 # Author: Krishna Kumar
-
+from polaris.messaging.messages import RepositoriesImported
 from polaris.vcs.messaging.messages import RefreshConnectorRepositories
 from polaris.messaging.utils import publish
-from polaris.messaging.topics import ConnectorsTopic
+from polaris.messaging.topics import ConnectorsTopic, VcsTopic
 
 
-def refresh_connector_repositories(connector_key, tracking_receipt=None,  channel=None):
+def refresh_connector_repositories(connector_key, tracking_receipt=None, channel=None):
     message = RefreshConnectorRepositories(
         send=dict(
             connector_key=connector_key,
@@ -25,4 +25,15 @@ def refresh_connector_repositories(connector_key, tracking_receipt=None,  channe
         message,
         channel=channel
     )
+    return message
+
+
+def repositories_imported(organization_key, imported_repositories, channel=None):
+    message = RepositoriesImported(
+        send=dict(
+            organization_key=organization_key,
+            imported_repositories=imported_repositories
+        )
+    )
+    publish(VcsTopic, message, channel=channel)
     return message

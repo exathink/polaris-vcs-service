@@ -26,6 +26,16 @@ def sync_repositories(organization_key, connector_key, source_repositories):
         return db.failure_message('Sync Repositories', e)
 
 
+def import_repositories(organization_key, repository_keys):
+    try:
+        with db.orm_session() as session:
+            return repositories.import_repositories(session, organization_key, repository_keys)
+    except SQLAlchemyError as exc:
+        return db.process_exception("Import Repositories", exc)
+    except Exception as e:
+        return db.failure_message('Import Repositories', e)
+
+
 # Commits
 def ack_commits_created(commit_keys):
     try:

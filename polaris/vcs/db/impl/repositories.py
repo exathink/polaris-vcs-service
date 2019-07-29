@@ -17,6 +17,7 @@ from polaris.common import db
 from polaris.repos.db.model import repositories
 from polaris.repos.db.schema import RepositoryImportState
 from polaris.utils.exceptions import ProcessingException
+from polaris.common.db import row_proxy_to_dict
 
 
 def sync_repositories(session, organization_key, connector_key, source_repositories):
@@ -105,3 +106,49 @@ def sync_repositories(session, organization_key, connector_key, source_repositor
     else:
         raise ProcessingException(f"Connector {connector.key} must specify an organization key "
                                   f"to import repositories")
+
+
+def import_repositories(session, organization_key, repository_keys):
+    repository_info = session.connection().execute(
+        select([
+            repositories.c.key,
+            repositories.c.name,
+            repositories.c.description,
+            repositories.c.url,
+            repositories.c.integration_type,
+            repositories.c.public
+        ]).where(
+            and_(
+                repositories.c.organization_key == organization_key,
+                repositories.c.key.in_(
+                    repository_keys
+                )
+            )
+        )
+    ).fetchall()
+
+    if len(repository_info) == len(repository_keys):
+        # Mark the repositories ready for import
+        session.connection().execute(
+            repositories.update().values(
+                import_state=RepositoryImportState.IMPORT_READY
+            ).where(
+                and_(
+                    repositories.c.organization_key == organization_key,
+                    repositories.c.key.in_(repository_keys)
+                )
+            )
+        )
+    else:
+        raise ProcessingException(f'Not all repositories in the '
+                                  f'specified list could be found in the current organization: '
+                                  f'Expected {len(repository_keys)}'
+                                  f'Found: {len(repository_info)}')
+    return dict(
+        success=True,
+        organization_key=organization_key,
+        repositories=[
+            row_proxy_to_dict(repository)
+            for repository in repository_info
+        ]
+    )

@@ -212,7 +212,7 @@ repositories_common_fields = dict(
 
 @pytest.yield_fixture
 def setup_sync_repos(setup_org_repo, setup_connectors):
-    organization, _ = setup_org_repo
+    repository, organization = setup_org_repo
     connectors = setup_connectors
 
-    yield organization.key, connectors
+    yield organization.organization_key, connectors
