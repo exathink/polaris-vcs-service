@@ -35,9 +35,9 @@ class Repository(
         return super().ConnectionField(
             named_node_resolver,
 
-            projectKeys=graphene.Argument(
-                graphene.List(graphene.String), required=False,
-                description='Only fetch repositories for the specified projects'
+            unimportedOnly=graphene.Argument(
+                graphene.Boolean, required=False,
+                description='Only fetch repositories  that have not yet been imported'
             ),
             **kwargs
         )
