@@ -41,6 +41,7 @@ setup(
         'polaris.vcs.service.graphql.repository',
         'polaris.vcs.service.graphql.vcs_connector',
         'polaris.vcs.messaging',
+        'polaris.vcs.messaging.messages',
         'polaris.vcs.messaging.subscribers',
         'polaris.vcs.messaging.tasks',
         'polaris.vcs.db',
