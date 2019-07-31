@@ -18,5 +18,6 @@ class RepositoryInfo(graphene.Interface):
     integration_type = graphene.String()
     public = graphene.Boolean()
     import_state = graphene.String()
+    commit_count = graphene.Int()
 
 

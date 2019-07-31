@@ -52,6 +52,7 @@ class TestVcsConnector:
                                 id
                                 name
                                 key
+                                importState
                             }
                         }
                     }

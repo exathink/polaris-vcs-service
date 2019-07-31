@@ -10,7 +10,7 @@
 
 from polaris.common.enums import RepositoryImportMode
 from polaris.repos.db.schema import RepositoryImportState
-
+from sqlalchemy import case
 
 def repository_info_columns(repositories):
     return [
@@ -18,7 +18,28 @@ def repository_info_columns(repositories):
         repositories.c.description,
         repositories.c.integration_type,
         repositories.c.public,
-        repositories.c.import_state
+        case([
+                (repositories.c.import_state == RepositoryImportState.IMPORT_DISABLED, 'disabled'),
+                (repositories.c.import_state == RepositoryImportState.IMPORT_READY, 'import queued'),
+                (repositories.c.import_state == RepositoryImportState.IMPORT_SMALL_READY, 'import queued'),
+                (repositories.c.import_state == RepositoryImportState.IMPORT_PENDING, 'importing'),
+                (repositories.c.import_state == RepositoryImportState.IMPORT_FAILED, 'import failed'),
+                (repositories.c.import_state == RepositoryImportState.IMPORT_TIMED_OUT, 'import timed out'),
+                (repositories.c.import_state == RepositoryImportState.CHECK_FOR_UPDATES, 'polling for updates'),
+                (repositories.c.import_state == RepositoryImportState.SYNC_FAILED, 'polling failed'),
+                (repositories.c.import_state == RepositoryImportState.UPDATE_READY, 'update queued'),
+                (repositories.c.import_state == RepositoryImportState.UPDATE_PENDING, 'updating'),
+                (repositories.c.import_state == RepositoryImportState.UPDATE_FAILED, 'update failed'),
+                (repositories.c.import_state == RepositoryImportState.UPDATE_LARGE_READY, 'update queued'),
+                (repositories.c.import_state == RepositoryImportState.UPDATE_TIMED_OUT, 'update timed out'),
+            ]
+        ).label('import_state'),
+        case(
+            [
+                (repositories.c.commit_count == None, 0)
+            ],
+            else_=0
+        ).label('commit_count')
     ]
 
 
