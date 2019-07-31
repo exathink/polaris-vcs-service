@@ -8,6 +8,8 @@
 
 # Author: Krishna Kumar
 
+from polaris.common.enums import RepositoryImportMode
+from polaris.repos.db.schema import RepositoryImportState
 
 
 def repository_info_columns(repositories):
@@ -18,3 +20,57 @@ def repository_info_columns(repositories):
         repositories.c.public,
         repositories.c.import_state
     ]
+
+
+def apply_filters(repositories, query, **kwargs):
+    if 'unimportedOnly' in kwargs and kwargs['unimportedOnly']:
+        query = query.where(
+            repositories.c.import_state == RepositoryImportState.IMPORT_DISABLED
+        )
+
+    if 'importMode' in kwargs:
+        query = filter_by_import_state(query, kwargs['importMode'], repositories)
+
+    return query
+
+
+def filter_by_import_state(query, import_mode, repositories):
+    if import_mode == RepositoryImportMode.importing.value:
+        return query.where(
+            repositories.c.import_state.in_(
+                [
+                    RepositoryImportState.IMPORT_READY,
+                    RepositoryImportState.IMPORT_PENDING,
+                    RepositoryImportState.IMPORT_SMALL_READY,
+                    RepositoryImportState.IMPORT_TIMED_OUT,
+                    RepositoryImportState.IMPORT_FAILED,
+                ]
+            )
+        )
+    elif import_mode == RepositoryImportMode.updating.value:
+        return query.where(
+            repositories.c.import_state.in_(
+                [
+                    RepositoryImportState.UPDATE_READY,
+                    RepositoryImportState.UPDATE_PENDING,
+                    RepositoryImportState.UPDATE_LARGE_READY,
+                    RepositoryImportState.UPDATE_TIMED_OUT,
+                    RepositoryImportState.UPDATE_FAILED,
+                ]
+            )
+        )
+    elif import_mode == RepositoryImportMode.polling.value:
+        return query.where(
+            repositories.c.import_state.in_(
+                [
+                    RepositoryImportState.CHECK_FOR_UPDATES,
+                    RepositoryImportState.SYNC_FAILED,
+                ]
+            )
+        )
+    elif import_mode == RepositoryImportMode.disabled.value:
+        return query.where(
+            repositories.c.import_state == RepositoryImportState.IMPORT_DISABLED
+        )
+    else:
+        assert False, 'Unhandled import mode'

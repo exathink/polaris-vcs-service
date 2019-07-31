@@ -13,7 +13,7 @@ from polaris.repos.db.model import repositories
 from polaris.repos.db.schema import RepositoryImportState
 from polaris.graphql.interfaces import NamedNode
 from ..interfaces import RepositoryInfo
-from ..repository.sql_expressions import repository_info_columns
+from ..repository.sql_expressions import repository_info_columns, apply_filters
 
 
 class ConnectorRepositoriesNodes:
@@ -30,10 +30,5 @@ class ConnectorRepositoriesNodes:
             repositories.c.connector_key == bindparam('key')
         )
 
-        if 'unimportedOnly' in kwargs and kwargs['unimportedOnly']:
-            query  = query.where(
-                repositories.c.import_state == RepositoryImportState.IMPORT_DISABLED
-            )
-
-        return query
+        return apply_filters(repositories, query, **kwargs)
 

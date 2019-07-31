@@ -17,7 +17,7 @@ from polaris.graphql.selectable import Selectable, CountableConnection, Connecti
 from ..interfaces import RepositoryInfo
 from ..interface_mixins import RepositoryInfoResolverMixin
 from .selectable import RepositoryNode
-
+from ..enums import RepositoryImportMode
 
 class Repository(
     RepositoryInfoResolverMixin,
@@ -35,6 +35,10 @@ class Repository(
         return super().ConnectionField(
             named_node_resolver,
 
+            importMode=graphene.Argument(
+                RepositoryImportMode, required=False,
+                description='Only fetch repositories with the specifiec import mode'
+            ),
             unimportedOnly=graphene.Argument(
                 graphene.Boolean, required=False,
                 description='Only fetch repositories  that have not yet been imported'
