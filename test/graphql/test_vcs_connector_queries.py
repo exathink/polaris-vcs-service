@@ -66,6 +66,63 @@ class TestVcsConnector:
         repositories = response['data']['vcsConnector']['repositories']['edges']
         assert len(repositories) == 1
 
+
+    def it_filters_repositories_by_key(self, setup_sync_repos):
+        client = Client(schema)
+
+        response = client.execute("""
+            query getConnectorInfo($connectorKey: String!, $keys: [String]!){
+                vcsConnector(key: $connectorKey) {
+                    id
+                    repositories(keys: $keys) {
+                        edges {
+                            node {
+                                id
+                                name
+                                key
+                                importState
+                            }
+                        }
+                    }
+                }
+            }
+        """, variable_values=dict(
+            connectorKey=github_connector_key,
+            keys=[test_repository_key]
+        ))
+
+        assert response['data']
+        repositories = response['data']['vcsConnector']['repositories']['edges']
+        assert len(repositories) == 1
+
+    def it_filters_repositories_by_keys_that_dont_exist(self, setup_sync_repos):
+        client = Client(schema)
+
+        response = client.execute("""
+            query getConnectorInfo($connectorKey: String!, $keys: [String]!){
+                vcsConnector(key: $connectorKey) {
+                    id
+                    repositories(keys: $keys) {
+                        edges {
+                            node {
+                                id
+                                name
+                                key
+                                importState
+                            }
+                        }
+                    }
+                }
+            }
+        """, variable_values=dict(
+            connectorKey=github_connector_key,
+            keys=[str(uuid.uuid4()), str(uuid.uuid4())]
+        ))
+
+        assert response['data']
+        repositories = response['data']['vcsConnector']['repositories']['edges']
+        assert len(repositories) == 0
+
 @pytest.yield_fixture
 def setup_import_state_tests(setup_org_repo, setup_connectors):
     repository, organization = setup_org_repo

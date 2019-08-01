@@ -43,6 +43,9 @@ class Repository(
                 graphene.Boolean, required=False,
                 description='Only fetch repositories  that have not yet been imported'
             ),
+            keys=graphene.Argument(
+              graphene.List(graphene.String, required=False, description='Fetch repositories with the specified keys')
+            ),
             **kwargs
         )
 

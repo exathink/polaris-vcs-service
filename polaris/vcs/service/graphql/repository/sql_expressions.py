@@ -52,6 +52,11 @@ def apply_filters(repositories, query, **kwargs):
     if 'importMode' in kwargs:
         query = filter_by_import_state(query, kwargs['importMode'], repositories)
 
+    if 'keys' in kwargs:
+        query = query.where(
+            repositories.c.key.in_(kwargs['keys'])
+        )
+
     return query
 
 
