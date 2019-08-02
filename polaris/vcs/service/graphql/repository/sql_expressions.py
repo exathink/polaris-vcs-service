@@ -38,7 +38,7 @@ def repository_info_columns(repositories):
             [
                 (repositories.c.commit_count == None, 0)
             ],
-            else_=0
+            else_=repositories.c.commit_count
         ).label('commit_count')
     ]
 

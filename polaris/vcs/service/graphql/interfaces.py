@@ -21,3 +21,5 @@ class RepositoryInfo(graphene.Interface):
     commit_count = graphene.Int()
 
 
+class SyncStateSummary(graphene.Interface):
+    commits_in_process = graphene.Int()

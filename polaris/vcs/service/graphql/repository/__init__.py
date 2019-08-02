@@ -14,18 +14,21 @@ import graphene
 
 from polaris.graphql.interfaces import NamedNode
 from polaris.graphql.selectable import Selectable, CountableConnection, ConnectionResolverMixin
-from ..interfaces import RepositoryInfo
-from ..interface_mixins import RepositoryInfoResolverMixin
-from .selectable import RepositoryNode
+from ..interfaces import RepositoryInfo, SyncStateSummary
+from ..interface_mixins import RepositoryInfoResolverMixin, SyncStateSummaryResolverMixin
+from .selectable import RepositoryNode, RepositorySyncStateSummary
 from ..enums import RepositoryImportMode
+
 
 class Repository(
     RepositoryInfoResolverMixin,
+    SyncStateSummaryResolverMixin,
     Selectable
 ):
     class Meta:
-        interfaces = (NamedNode, RepositoryInfo)
+        interfaces = (NamedNode, RepositoryInfo, SyncStateSummary)
         interface_resolvers = {
+            'SyncStateSummary': RepositorySyncStateSummary
         }
         named_node_resolver = RepositoryNode
         connection_class = lambda: Repositories
@@ -59,6 +62,7 @@ class Repositories(
 ):
     class Meta:
         node = Repository
+        interfaces = (SyncStateSummary,)
 
 
 class RepositoriesConnectionMixin(ConnectionResolverMixin):

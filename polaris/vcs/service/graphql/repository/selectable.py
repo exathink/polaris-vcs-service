@@ -7,12 +7,14 @@
 # confidential.
 
 # Author: Krishna Kumar
-from sqlalchemy import select, bindparam
+from sqlalchemy import select, bindparam, func
 
 from polaris.graphql.interfaces import NamedNode
-from ..interfaces import RepositoryInfo
+from ..interfaces import RepositoryInfo, SyncStateSummary
 
 from polaris.repos.db.model import repositories
+from polaris.repos.db.schema import commits
+
 from .sql_expressions import repository_info_columns
 
 
@@ -30,3 +32,24 @@ class RepositoryNode:
         ]).select_from(
             repositories
         ).where(repositories.c.key == bindparam('key'))
+
+
+class RepositorySyncStateSummary:
+    interface = SyncStateSummary
+
+    @staticmethod
+    def selectable(repository_nodes, **kwargs):
+        return select(
+            [
+                repository_nodes.c.id,
+                func.count(commits.c.id).label('commits_in_process')
+            ]
+        ).select_from(
+            repository_nodes.outerjoin(
+                commits, commits.c.repository_id == repository_nodes.c.id
+            )
+        ).where(
+            commits.c.sync_state == 0
+        ).group_by(
+            repository_nodes.c.id
+        )

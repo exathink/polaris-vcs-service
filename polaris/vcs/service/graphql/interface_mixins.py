@@ -10,7 +10,7 @@
 
 from polaris.graphql.utils import create_tuple, init_tuple
 from polaris.graphql.mixins import KeyIdResolverMixin
-from .interfaces import RepositoryInfo
+from .interfaces import RepositoryInfo, SyncStateSummary
 
 
 class RepositoryInfoResolverMixin(KeyIdResolverMixin):
@@ -47,3 +47,25 @@ class RepositoryInfoResolverMixin(KeyIdResolverMixin):
     def resolve_public(self, info, **kwargs):
         return self.get_repository_info(info, **kwargs).public
 
+
+class SyncStateSummaryResolverMixin(KeyIdResolverMixin):
+    sync_state_summary_tuple = create_tuple(SyncStateSummary)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.sync_state_summary = init_tuple(self.sync_state_summary_tuple, **kwargs)
+
+    def resolve_sync_state_summary_interface(self, info, **kwargs):
+        return self.resolve_interface_for_instance(
+            interface=['SyncStateSummary'],
+            params=self.get_instance_query_params(),
+            **kwargs
+        )
+
+    def get_sync_state_summary(self, info, **kwargs):
+        if self.sync_state_summary is None:
+            self.sync_state_summary = self.resolve_sync_state_summary_interface(info, **kwargs)
+        return self.sync_state_summary
+
+    def get_commits_in_process(self, info, **kwargs):
+        return self.get_sync_state_summary(info, **kwargs).commits_in_process
