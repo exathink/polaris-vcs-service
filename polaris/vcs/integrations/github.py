@@ -42,4 +42,5 @@ class GithubRepositoriesConnector(GithubConnector):
             yield [
                 self.map_repository_info(repo)
                 for repo in repos_paginator._fetchNextPage()
+                if not repo.archived
             ]
