@@ -40,3 +40,12 @@ def import_repositories(organization_key, repository_keys):
             imported_repositories = result['repositories']
             publish.repositories_imported(organization_key, imported_repositories)
             return result['repositories']
+
+
+def test_vcs_connector(connector_key, join_this=None):
+    with db.orm_session(join_this) as session:
+        vcs_connector = connector_factory.get_connector(
+            connector_key=connector_key,
+            join_this=session
+        )
+        return vcs_connector.test()

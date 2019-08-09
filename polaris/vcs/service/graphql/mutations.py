@@ -12,9 +12,14 @@ import graphene
 import logging
 
 from polaris.common import db
-from polaris.integrations.db.api import create_tracking_receipt
+from polaris.integrations.db.api import create_tracking_receipt, create_connector
+from polaris.integrations.graphql import CreateConnector
+from polaris.integrations import publish as integrations_publish
+from polaris.utils.exceptions import ProcessingException
+
 from polaris.vcs.messaging import publish
 from polaris.vcs import commands
+from .vcs_connector import VcsConnector
 
 logger = logging.getLogger('polaris.vcs.graphql.mutations')
 
@@ -76,3 +81,48 @@ class ImportRepositories(graphene.Mutation):
                 for repository in imported_repositories
             ]
         )
+
+
+class TestConnectorInput(graphene.InputObjectType):
+    connector_key = graphene.String(required=True)
+
+
+class TestVcsConnector(graphene.Mutation):
+    class Arguments:
+        test_connector_input = TestConnectorInput(required=True)
+
+    success = graphene.Boolean()
+
+    def mutate(self, info, test_connector_input):
+        connector_key = test_connector_input.connector_key
+        logger.info(f'Test Connector called for connector {connector_key}')
+        with db.orm_session() as session:
+            return TestVcsConnector(
+                success=commands.test_vcs_connector(connector_key, join_this=session)
+            )
+
+
+class CreateVcsConnector(CreateConnector):
+    connector = VcsConnector.Field(key_is_required=False)
+
+    def mutate(self, info, create_connector_input):
+        logger.info('Create WorkTracking Connector called')
+        with db.orm_session() as session:
+            connector = create_connector(create_connector_input.connector_type, create_connector_input,
+                                         join_this=session)
+
+            # if the connector is created in a non-enabled state (Atlassian for example)
+            # we cannot test it. So default is assume test pass.
+            can_create = True
+            if connector.state == 'enabled':
+                can_create = commands.test_vcs_connector(connector.key, join_this=session)
+
+            if can_create:
+                resolved = CreateConnector(
+                    connector=VcsConnector.resolve_field(info, connector.key)
+                )
+                # Do the publish right at the end.
+                integrations_publish.connector_created(connector)
+                return resolved
+            else:
+                raise ProcessingException("Could not create connector: Connector test failed")
