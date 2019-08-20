@@ -116,7 +116,8 @@ def import_repositories(session, organization_key, repository_keys):
             repositories.c.description,
             repositories.c.url,
             repositories.c.integration_type,
-            repositories.c.public
+            repositories.c.public,
+            repositories.c.source_id
         ]).where(
             and_(
                 repositories.c.organization_key == organization_key,
