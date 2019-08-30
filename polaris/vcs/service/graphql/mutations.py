@@ -12,8 +12,8 @@ import graphene
 import logging
 
 from polaris.common import db
-from polaris.integrations.db.api import create_tracking_receipt, create_connector
-from polaris.integrations.graphql import CreateConnector
+from polaris.integrations.db.api import create_tracking_receipt, create_connector, update_connector
+from polaris.integrations.graphql import CreateConnector, EditConnector
 from polaris.integrations import publish as integrations_publish
 from polaris.utils.exceptions import ProcessingException
 
@@ -126,3 +126,22 @@ class CreateVcsConnector(CreateConnector):
                 return resolved
             else:
                 raise ProcessingException("Could not create connector: Connector test failed")
+
+
+class EditVcsConnector(EditConnector):
+    connector = VcsConnector.Field(key_is_required=False)
+
+    def mutate(self, info, edit_connector_input):
+        logger.info('Update VCS Connector called')
+        with db.orm_session() as session:
+            connector = update_connector(edit_connector_input.connector_type, edit_connector_input,
+                                         join_this=session)
+            if commands.test_vcs_connector(connector.key, join_this=session):
+                resolved = EditConnector(
+                    connector=VcsConnector.resolve_field(info, connector.key)
+                )
+                # Do the publish right at the end.
+                # integrations_publish.connector_created(connector)
+                return resolved
+            else:
+                raise ProcessingException("Could not update connector: Connector test failed")
