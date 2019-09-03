@@ -17,7 +17,7 @@ from polaris.flask import gql
 from polaris.utils.logging import config_logging
 from polaris.messaging.topics import WorkItemsTopic, ConnectorsTopic
 from polaris.messaging.utils import init_topics_to_publish
-
+from polaris.vcs.integrations.atlassian import bitbucket_atlassian_connect
 from polaris.vcs.service import graphql
 
 
@@ -51,7 +51,7 @@ if config_provider.get('DEBUG_SQL') == 'true':
 # Register endpoints
 app.register_blueprint(gql.api, url_prefix='/graphql', schema=graphql.schema)
 
-# jira_atlassian_connect.init_connector(app)
+bitbucket_atlassian_connect.init_connector(app)
 
 # Make sure topics we interact with are available.
 init_topics_to_publish(WorkItemsTopic, ConnectorsTopic)
