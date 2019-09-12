@@ -13,26 +13,31 @@ from polaris.integrations.atlassian_connect import PolarisAtlassianConnector
 from polaris.utils.exceptions import ProcessingException
 
 
-class JiraConnector(PolarisAtlassianConnector):
+class BitBucketConnector(PolarisAtlassianConnector):
+
+    def get_repository_url_with_access_token(self, repository_name):
+        pass
 
     def __init__(self, connector):
         super().__init__(connector)
+        self.base_url = f'{connector.base_url}/2.0'
+        self.atlassian_account_key = connector.atlassian_account_key
+
+    def api_url(self, path, version='2.0'):
+        return f'{path}'
 
     def test(self):
-        fetch_projects_url = '/project/search'
-        query_params = dict(
-            maxResults=1
-        )
+        fetch_repos_url = f'/repositories/{{{self.atlassian_account_key}}}'
+
         response = self.get(
-            fetch_projects_url,
-            params=query_params,
+            fetch_repos_url,
             headers={"Accept": "application/json"},
         )
 
         if response.ok:
             return True
         else:
-            raise ProcessingException(f'Jira Connector Test Failed: {response.text} ({response.status_code})')
+            raise ProcessingException(f'Bitbucket Connector Test Failed: {response.text} ({response.status_code})')
 
     def fetch_project(self, project_id):
         fetch_project_url = f'/project/{project_id}'
