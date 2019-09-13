@@ -7,10 +7,15 @@
 # confidential.
 
 # Author: Krishna Kumar
+import logging
 
-from polaris.common.enums import WorkTrackingIntegrationType, JiraWorkItemSourceType
+from urllib import parse
+from polaris.common.enums import VcsIntegrationTypes
 from polaris.integrations.atlassian_connect import PolarisAtlassianConnector
 from polaris.utils.exceptions import ProcessingException
+from polaris.utils.collections import find
+
+log = logging.getLogger('polaris.vcs.bitbucket_connector')
 
 
 class BitBucketConnector(PolarisAtlassianConnector):
@@ -20,14 +25,14 @@ class BitBucketConnector(PolarisAtlassianConnector):
 
     def __init__(self, connector):
         super().__init__(connector)
-        self.base_url = f'{connector.base_url}/2.0'
+        self.base_url = f'{connector.base_url}'
         self.atlassian_account_key = connector.atlassian_account_key
 
     def api_url(self, path, version='2.0'):
         return f'{path}'
 
     def test(self):
-        fetch_repos_url = f'/repositories/{{{self.atlassian_account_key}}}'
+        fetch_repos_url = f'/2.0/repositories/{{{self.atlassian_account_key}}}'
 
         response = self.get(
             fetch_repos_url,
@@ -39,76 +44,66 @@ class BitBucketConnector(PolarisAtlassianConnector):
         else:
             raise ProcessingException(f'Bitbucket Connector Test Failed: {response.text} ({response.status_code})')
 
-    def fetch_project(self, project_id):
-        fetch_project_url = f'/project/{project_id}'
-        query_params = dict(
-            expand='description, url'
-        )
-        response = self.get(
-            fetch_project_url,
-            params=query_params,
-            headers={"Accept": "application/json"},
-        )
-
-        if response.ok:
-            return response.json()
+    @staticmethod
+    def get_next_result_url(next_page):
+        if next_page is not None:
+            page_parts = parse.urlsplit(next_page)
+            return page_parts.path, parse.parse_qs(page_parts.query)
         else:
-            raise ProcessingException(f'Failed to fetch projects from connnect {self.key} at offset {offset}: {response.text}')
-
-    def fetch_projects(self, maxResults, offset):
-        fetch_projects_url = '/project/search'
-        query_params = dict(
-            startAt=offset,
-            maxResults=maxResults,
-            expand='description,url'
-        )
-        response = self.get(
-            fetch_projects_url,
-            params=query_params,
-            headers={"Accept": "application/json"},
-        )
-
-        if response.ok:
-            body = response.json()
-            return body.get('values'), body.get('total')
-        else:
-            raise ProcessingException(f'Failed to fetch projects from connnect {self.key} at offset {offset}: {response.text}')
+            return None, None
 
     @staticmethod
-    def map_project_to_work_items_sources_data(project):
-        return dict(
-            integration_type=WorkTrackingIntegrationType.jira.value,
-            work_items_source_type=JiraWorkItemSourceType.project.value,
-            commit_mapping_scope='organization',
-            source_id=project['id'],
-            name=project['name'],
-            url=project.get('url'),
-            description=project.get('description')
+    def get_clone_url(clone_urls, scheme):
+        for entry in clone_urls:
+            if entry['name'] == scheme:
+                return entry['href']
 
+    def fetch_repositories(self):
+        fetch_repos_url = f'/2.0/repositories/{{{self.atlassian_account_key}}}'
+        params = None
+
+        while fetch_repos_url is not None:
+            response = self.get(
+                fetch_repos_url,
+                params=params,
+                headers={"Accept": "application/json"},
+            )
+
+            if response.ok:
+                result = response.json()
+                yield result['values']
+                fetch_repos_url, params = self.get_next_result_url(result['next'])
+            else:
+                log.error(
+                    f'Bitbucket Fetch repositories failed: '
+                    f'{self.connector.name }: {fetch_repos_url} {response.text} ({response.status_code})'
+                )
+                raise ProcessingException(
+                    f'Bitbucket Fetch repositories failed: '
+                    f'{response.text} ({response.status_code})'
+                )
+
+    def map_repository_info(self, repo):
+        return dict(
+            name=repo['name'],
+            url=self.get_clone_url(repo['links']['clone'], 'https'),
+            public=not repo['is_private'],
+            vendor='git',
+            integration_type=VcsIntegrationTypes.bitbucket.value,
+            description=repo['description'],
+            source_id=repo['uuid'],
+            properties=dict(
+                full_name=repo['full_name'],
+                ssh_url=self.get_clone_url(repo['links']['clone'], 'ssh'),
+                homepage=repo['website'],
+                default_branch=repo['mainbranch']['name']
+            ),
         )
 
-    def fetch_work_items_sources_to_sync(self, batch_size=100):
-        offset = 0
-        projects, total = self.fetch_projects(maxResults=batch_size, offset=offset)
-        while projects is not None and offset < total:
-            if len(projects) == 0:
-                break
-
-            work_items_sources = []
-            for project in projects:
-                work_items_sources_data = self.map_project_to_work_items_sources_data(project)
-                if work_items_sources_data:
-                    work_items_sources.append(work_items_sources_data)
-
-            yield work_items_sources
-
-            offset = offset + len(projects)
-            projects, total = self.fetch_projects(maxResults=batch_size, offset=offset)
-
-    def fetch_work_items_source_data_for_project(self, project_id):
-        return self.map_project_to_work_items_sources_data(self.fetch_project(project_id))
-
-
-
-
-
+    def fetch_repositories_from_source(self):
+        for repositories in self.fetch_repositories():
+            yield [
+                self.map_repository_info(repo)
+                for repo in repositories
+                if repo['scm'] == 'git'  # we dont support hg or sourcetree which are options in bitbucket
+            ]
