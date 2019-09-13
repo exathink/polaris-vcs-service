@@ -47,6 +47,7 @@ setup(
         'polaris.vcs.db',
         'polaris.vcs.db.impl',
         'polaris.vcs.integrations',
+        'polaris.vcs.integrations.atlassian',
 
     ],
     url='',
