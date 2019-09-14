@@ -11,6 +11,7 @@
 import logging
 from polaris.integrations.github import GithubConnector
 from polaris.common.enums import VcsIntegrationTypes
+from polaris.utils.exceptions import ProcessingException
 
 logger = logging.getLogger('polaris.vcs.integrations.github')
 
@@ -35,6 +36,15 @@ class GithubRepositoriesConnector(GithubConnector):
                 default_branch=repo.default_branch,
             ),
         )
+
+    def fetch_repositories(self):
+        if self.access_token is not None:
+            github = self.get_github_client()
+            organization = github.get_organization(self.github_organization)
+            if organization is not None:
+                return organization.get_repos()
+        else:
+            raise ProcessingException("No access token found this Github Connector. Cannot continue.")
 
     def fetch_repositories_from_source(self):
         repos_paginator = self.fetch_repositories()
