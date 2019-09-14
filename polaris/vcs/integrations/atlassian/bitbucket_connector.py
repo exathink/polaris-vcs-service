@@ -11,25 +11,21 @@ import logging
 
 from urllib import parse
 from polaris.common.enums import VcsIntegrationTypes
-from polaris.integrations.atlassian_connect import PolarisAtlassianConnector
+from polaris.integrations.atlassian_connect import BitBucketBaseConnector
 from polaris.utils.exceptions import ProcessingException
-from polaris.utils.collections import find
+
 
 log = logging.getLogger('polaris.vcs.bitbucket_connector')
 
 
-class BitBucketConnector(PolarisAtlassianConnector):
-
-    def get_repository_url_with_access_token(self, repository_name):
-        pass
+class BitBucketConnector(BitBucketBaseConnector):
 
     def __init__(self, connector):
         super().__init__(connector)
         self.base_url = f'{connector.base_url}'
         self.atlassian_account_key = connector.atlassian_account_key
 
-    def api_url(self, path, version='2.0'):
-        return f'{path}'
+
 
     def test(self):
         fetch_repos_url = f'/2.0/repositories/{{{self.atlassian_account_key}}}'
