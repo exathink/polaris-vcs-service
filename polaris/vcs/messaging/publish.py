@@ -8,9 +8,10 @@
 
 # Author: Krishna Kumar
 from polaris.messaging.messages import RepositoriesImported
-from polaris.vcs.messaging.messages import RefreshConnectorRepositories
+from polaris.vcs.messaging.messages import RefreshConnectorRepositories, AtlassianConnectRepositoryEvent
 from polaris.messaging.utils import publish
 from polaris.messaging.topics import ConnectorsTopic, VcsTopic
+from polaris.integrations.publish import connector_event
 
 
 def refresh_connector_repositories(connector_key, tracking_receipt=None, channel=None):
@@ -36,4 +37,20 @@ def repositories_imported(organization_key, imported_repositories, channel=None)
         )
     )
     publish(VcsTopic, message, channel=channel)
+    return message
+
+
+def atlassian_connect_repository_event(atlassian_connector_key, atlassian_event_type, atlassian_event, channel=None):
+    message = AtlassianConnectRepositoryEvent(
+            send=dict(
+                atlassian_connector_key=atlassian_connector_key,
+                atlassian_event_type = atlassian_event_type,
+                atlassian_event = atlassian_event
+            )
+        )
+    publish(
+        VcsTopic,
+        message,
+        channel=channel
+    )
     return message
