@@ -68,7 +68,7 @@ class BitBucketConnector(BitBucketBaseConnector):
             if response.ok:
                 result = response.json()
                 yield result['values']
-                fetch_repos_url, params = self.get_next_result_url(result['next'])
+                fetch_repos_url, params = self.get_next_result_url(result.get('next'))
             else:
                 log.error(
                     f'Bitbucket Fetch repositories failed: '
@@ -92,7 +92,7 @@ class BitBucketConnector(BitBucketBaseConnector):
                 full_name=repo['full_name'],
                 ssh_url=self.get_clone_url(repo['links']['clone'], 'ssh'),
                 homepage=repo['website'],
-                default_branch=repo['mainbranch']['name']
+                default_branch=repo['mainbranch']['name'] if repo['mainbranch'] else 'master'
             ),
         )
 
