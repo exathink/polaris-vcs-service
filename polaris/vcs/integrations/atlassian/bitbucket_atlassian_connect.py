@@ -13,7 +13,8 @@ import logging
 from polaris.integrations.atlassian_connect import PolarisAtlassianConnect
 from polaris.integrations.db.api import load_atlassian_connect_record, enable_atlassian_connect_record
 from polaris.utils.config import get_config_provider
-from polaris.work_tracking import publish
+from polaris.vcs.messaging import publish
+from polaris.utils.exceptions import ConfigurationException
 
 log = logging.getLogger('polaris.vcs.bitbucket_connector')
 
@@ -24,16 +25,18 @@ class BitBucketConnectorContext:
     base_url = config_provider.get('BITBUCKET_CONNECTOR_BASE_URL')
     mount_path = config_provider.get('MOUNT_PATH')
 
-    app_name = "Urjuna BitBucket Connector"
-    addon_name = "Urjuna BitBucket Connector"
-    addon_key = config_provider.get('BITBUCKET_CONNECTOR_APP_KEY', 'polaris.bitbucket')
-    addon_description = "BitBucket Connector for Urjuna"
+    app_name = "Urjuna Connector for BitBucket"
+    addon_name = "Urjuna Connector for BitBucket"
+    addon_key = config_provider.get('BITBUCKET_CONNECTOR_APP_KEY')
+    if addon_key is None:
+        raise ConfigurationException("BITBUCKET_CONNECTOR_APP_KEY must be specified")
+
+    addon_description = "Urjuna Connector for BitBucket"
     addon_scopes = ['repository', 'issue', 'pullrequest', 'webhook']
     addon_version = 1
 
 
 def init_connector(app):
-
     log.info("Initializing Atlassian Connector for BitBucket")
 
     ac = PolarisAtlassianConnect(app, connector_context=BitBucketConnectorContext)
@@ -64,13 +67,97 @@ def init_connector(app):
                 event='enabled'
             )
 
-
     @ac.lifecycle("disabled")
     def lifecycle_disabled(client):
         log.info(f'Connector disabled: {client.baseUrl} ({client.clientKey})')
 
+    @ac.webhook("repo:created")
+    def handle_repo_created(client, event):
+        log.info(f' repo:created Event Received: {client.baseUrl} ({client.clientKey})')
+        publish.atlassian_connect_repository_event(
+            atlassian_connector_key=client.atlassianConnectorKey,
+            atlassian_event_type='repo:created',
+            atlassian_event=event
+        )
 
+    @ac.webhook("repo:updated")
+    def handle_repo_updated(client, event):
+        log.info(f' repo:updated Event Received: {client.baseUrl} ({client.clientKey})')
+        publish.atlassian_connect_repository_event(
+            atlassian_connector_key=client.atlassianConnectorKey,
+            atlassian_event_type='repo:updated',
+            atlassian_event=event
+        )
 
+    @ac.webhook("repo:deleted")
+    def handle_repo_deleted(client, event):
+        log.info(f' repo:deleted Event Received: {client.baseUrl} ({client.clientKey})')
+        publish.atlassian_connect_repository_event(
+            atlassian_connector_key=client.atlassianConnectorKey,
+            atlassian_event_type='repo:deleted',
+            atlassian_event=event
+        )
 
+    @ac.webhook("repo:push")
+    def handle_repo_push(client, event):
+        log.info(f' repo:push Event Received: {client.baseUrl} ({client.clientKey})')
+        publish.atlassian_connect_repository_event(
+            atlassian_connector_key=client.atlassianConnectorKey,
+            atlassian_event_type='repo:push',
+            atlassian_event=event
+        )
 
+    @ac.webhook("repo:fork")
+    def handle_repo_fork(client, event):
+        log.info(f' repo:fork Event Received: {client.baseUrl} ({client.clientKey})')
+        publish.atlassian_connect_repository_event(
+            atlassian_connector_key=client.atlassianConnectorKey,
+            atlassian_event_type='repo:fork',
+            atlassian_event=event
+        )
+
+    @ac.webhook("repo:branch_created")
+    def handle_repo_branch_created(client, event):
+        log.info(f' repo:branch_created Event Received: {client.baseUrl} ({client.clientKey})')
+        publish.atlassian_connect_repository_event(
+            atlassian_connector_key=client.atlassianConnectorKey,
+            atlassian_event_type='repo:branch_created',
+            atlassian_event=event
+        )
+
+    @ac.webhook("repo:branch_deleted")
+    def handle_repo_branch_deleted(client, event):
+        log.info(f' repo:branch_deleted Event Received: {client.baseUrl} ({client.clientKey})')
+        publish.atlassian_connect_repository_event(
+            atlassian_connector_key=client.atlassianConnectorKey,
+            atlassian_event_type='repo:branch_deleted',
+            atlassian_event=event
+        )
+
+    @ac.webhook("repo:commit_comment_created")
+    def handle_repo_commit_comment_created(client, event):
+        log.info(f' repo:commit_comment_created Event Received: {client.baseUrl} ({client.clientKey})')
+        publish.atlassian_connect_repository_event(
+            atlassian_connector_key=client.atlassianConnectorKey,
+            atlassian_event_type='repo:commit_comment_created',
+            atlassian_event=event
+        )
+
+    @ac.webhook("repo:commit_status_created")
+    def handle_repo_commit_status_created(client, event):
+        log.info(f' repo:commit_status_created Event Received: {client.baseUrl} ({client.clientKey})')
+        publish.atlassian_connect_repository_event(
+            atlassian_connector_key=client.atlassianConnectorKey,
+            atlassian_event_type='repo:commit_status_created',
+            atlassian_event=event
+        )
+
+    @ac.webhook("repo:commit_status_updated")
+    def handle_repo_commit_status_updated(client, event):
+        log.info(f' repo:commit_status_updated Event Received: {client.baseUrl} ({client.clientKey})')
+        publish.atlassian_connect_repository_event(
+            atlassian_connector_key=client.atlassianConnectorKey,
+            atlassian_event_type='repo:commit_status_updated',
+            atlassian_event=event
+        )
 

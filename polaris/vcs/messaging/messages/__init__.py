@@ -11,9 +11,11 @@
 from polaris.messaging.messages import register_messages
 
 from .refresh_connector_repositories import RefreshConnectorRepositories
+from .atlassian_connect_repository_event import AtlassianConnectRepositoryEvent
 
 # Add this to the global message factory so that the messages can be desrialized on reciept.
 register_messages([
+    AtlassianConnectRepositoryEvent,
     RefreshConnectorRepositories
 ])
 
