@@ -36,6 +36,16 @@ def import_repositories(organization_key, repository_keys):
         return db.failure_message('Import Repositories', e)
 
 
+def handle_repository_push(organization_key, repository_key):
+    try:
+        with db.orm_session() as session:
+            return repositories.handle_repository_push(session, organization_key, repository_key)
+
+    except SQLAlchemyError as exc:
+        return db.process_exception("Handle repository push", exc)
+    except Exception as e:
+        return db.failure_message('Handle repository push', e)
+
 # Commits
 def ack_commits_created(commit_keys):
     try:
@@ -55,3 +65,5 @@ def ack_commits_details_created(commit_keys):
         return db.process_exception("Ack Commits Created", exc)
     except Exception as e:
         return db.failure_message('Ack Commits Created', e)
+
+

@@ -8,17 +8,20 @@
 
 # Author: Krishna Kumar
 import uuid
+import logging
+
 from datetime import datetime
 
 from sqlalchemy import select, and_
 from sqlalchemy.dialects.postgresql import insert
 
 from polaris.common import db
-from polaris.repos.db.model import repositories
+from polaris.repos.db.model import repositories, Repository
 from polaris.repos.db.schema import RepositoryImportState
 from polaris.utils.exceptions import ProcessingException
 from polaris.common.db import row_proxy_to_dict
 
+log = logging.getLogger('polaris.vcs.db.impl.repositories')
 
 def sync_repositories(session, organization_key, connector_key, source_repositories):
     if organization_key is not None:
@@ -153,3 +156,18 @@ def import_repositories(session, organization_key, repository_keys):
             for repository in repository_info
         ]
     )
+
+
+def handle_repository_push(session, organization_key, repository_key):
+
+    repo = Repository.find_by_repository_key(session, repository_key)
+    if repo is not None:
+        log.info(f'Received repository push for organization {organization_key} Repository {repo.name}')
+        if repo.import_state == RepositoryImportState.CHECK_FOR_UPDATES:
+            repo.import_state = RepositoryImportState.UPDATE_READY
+
+        return dict(
+            success=True
+        )
+    else:
+        raise ProcessingException(f"Could not find repository with key {repository_key}")
