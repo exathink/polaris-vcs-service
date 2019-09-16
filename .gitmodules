@@ -22,3 +22,6 @@
 [submodule "polaris-common-db"]
 	path = polaris-common-db
 	url = ../../polaris-common/polaris-common-db
+[submodule "polaris-repos-intake-db"]
+	path = polaris-repos-intake-db
+	url = ../../polaris-dbapi/polaris-repos-intake-db
