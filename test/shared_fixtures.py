@@ -15,7 +15,7 @@ from datetime import datetime
 from polaris.common import db
 from polaris.common.enums import VcsIntegrationTypes
 from polaris.repos.db.model import Organization, Repository
-from polaris.repos.db.schema import commits,contributors, contributor_aliases
+from polaris.repos.db.schema import commits,contributors, contributor_aliases, RepositoryImportState
 from polaris.integrations.db import model as integrations_model
 
 test_account_key = uuid.uuid4()
@@ -65,11 +65,23 @@ repositories_common_fields = dict(
     )
 )
 
+@pytest.yield_fixture
+def cleanup():
+    yield
+
+    db.connection().execute("delete from repos.source_file_versions")
+    db.connection().execute("delete from repos.source_files")
+    db.connection().execute("delete from repos.commits")
+    db.connection().execute("delete from repos.contributor_aliases")
+    db.connection().execute("delete from repos.contributors")
+    db.connection().execute("delete from repos.repositories")
+    db.connection().execute("delete from repos.organizations")
+
 
 
 
 @pytest.yield_fixture()
-def setup_org_repo(setup_schema):
+def setup_org_repo(setup_schema, cleanup):
 
     with db.orm_session() as session:
         session.expire_on_commit=False
@@ -98,13 +110,7 @@ def setup_org_repo(setup_schema):
 
     yield repository, organization
 
-    db.connection().execute("delete from repos.source_file_versions")
-    db.connection().execute("delete from repos.source_files")
-    db.connection().execute("delete from repos.commits")
-    db.connection().execute("delete from repos.contributor_aliases")
-    db.connection().execute("delete from repos.contributors")
-    db.connection().execute("delete from repos.repositories")
-    db.connection().execute("delete from repos.organizations")
+
 
 
 
@@ -218,3 +224,12 @@ def setup_sync_repos(setup_org_repo, setup_connectors):
     yield organization.organization_key, connectors
 
 
+
+@pytest.yield_fixture
+def setup_repo_waiting_for_update(setup_org_repo):
+    repository, organization = setup_org_repo
+    with db.orm_session() as session:
+        session.add(repository)
+        repository.import_state = RepositoryImportState.CHECK_FOR_UPDATES
+
+    yield repository, organization

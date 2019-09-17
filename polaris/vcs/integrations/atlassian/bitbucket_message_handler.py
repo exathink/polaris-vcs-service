@@ -17,7 +17,7 @@ from polaris.utils.exceptions import ProcessingException
 
 def handle_atlassian_connect_repository_event(connector_key, event_type, event):
     if event_type == 'repo:push':
-        handle_repo_push(connector_key, event)
+        return handle_repo_push(connector_key, event)
 
 
 def handle_repo_push(connector_key, event):
@@ -26,7 +26,7 @@ def handle_repo_push(connector_key, event):
     repo = find_repository(connector_key, repo_source_id)
 
     if repo is not None:
-        api.handle_repository_push(repo.organization_key, repo.key)
+        return api.handle_repository_push(repo.organization_key, repo.key)
     else:
         raise ProcessingException(f"Could not find repository with connectory key "
                                   f"{connector_key} and source_id {repo_source_id}")

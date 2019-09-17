@@ -45,7 +45,7 @@ class VcsTopicSubscriber(TopicSubscriber):
             f" Connector Key : {connector_key}"
         )
         try:
-            bitbucket_message_handler.handle_atlassian_connect_repository_event(
+            return bitbucket_message_handler.handle_atlassian_connect_repository_event(
                 connector_key,
                 event_type,
                 event
