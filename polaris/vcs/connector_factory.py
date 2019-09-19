@@ -13,6 +13,7 @@ from polaris.integrations.db.api import find_connector, find_connector_by_name
 from polaris.utils.exceptions import ProcessingException
 from polaris.vcs.integrations.github import GithubRepositoriesConnector
 from polaris.vcs.integrations.atlassian import BitBucketConnector
+from polaris.vcs.integrations.gitlab import GitlabConnector
 
 
 def get_connector(connector_name=None, connector_key=None, join_this=None):
@@ -27,6 +28,8 @@ def get_connector(connector_name=None, connector_key=None, join_this=None):
                 return GithubRepositoriesConnector(connector)
             elif connector.type == ConnectorType.atlassian.value:
                 return BitBucketConnector(connector)
+            elif connector.type == ConnectorType.gitlab.value:
+                return GitlabConnector(connector)
             else:
                 raise ProcessingException(f'No Repositories connector registered for connector type: {connector.type} '
                                           f'Connector Key was {connector_key}')
