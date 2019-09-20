@@ -9,6 +9,7 @@
 # Author: Krishna Kumar
 
 import logging
+import requests
 from polaris.integrations.gitlab import GitlabConnector
 from polaris.common.enums import VcsIntegrationTypes
 from polaris.utils.exceptions import ProcessingException
@@ -20,6 +21,8 @@ class GitlabRepositoriesConnector(GitlabConnector):
 
     def __init__(self, connector):
         super().__init__(connector)
+
+
 
     def map_repository_info(self, repo):
         return dict(
@@ -38,19 +41,10 @@ class GitlabRepositoriesConnector(GitlabConnector):
         )
 
     def fetch_repositories(self):
-        if self.access_token is not None:
-            github = self.get_github_client()
-            organization = github.get_organization(self.github_organization)
-            if organization is not None:
-                return organization.get_repos()
+        if self.personal_access_token is not None:
+            pass
         else:
             raise ProcessingException("No access token found this Github Connector. Cannot continue.")
 
     def fetch_repositories_from_source(self):
-        repos_paginator = self.fetch_repositories()
-        while repos_paginator._couldGrow():
-            yield [
-                self.map_repository_info(repo)
-                for repo in repos_paginator._fetchNextPage()
-                if not repo.archived
-            ]
+        pass
