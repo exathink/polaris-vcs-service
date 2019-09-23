@@ -8,7 +8,8 @@
 
 # Author: Krishna Kumar
 from polaris.messaging.messages import RepositoriesImported
-from polaris.vcs.messaging.messages import RefreshConnectorRepositories, AtlassianConnectRepositoryEvent
+from polaris.vcs.messaging.messages import RefreshConnectorRepositories, AtlassianConnectRepositoryEvent, \
+    GitlabRepositoryEvent, RemoteRepositoryPushEvent
 from polaris.messaging.utils import publish
 from polaris.messaging.topics import ConnectorsTopic, VcsTopic
 from polaris.integrations.publish import connector_event
@@ -42,12 +43,43 @@ def repositories_imported(organization_key, imported_repositories, channel=None)
 
 def atlassian_connect_repository_event(atlassian_connector_key, atlassian_event_type, atlassian_event, channel=None):
     message = AtlassianConnectRepositoryEvent(
-            send=dict(
-                atlassian_connector_key=atlassian_connector_key,
-                atlassian_event_type = atlassian_event_type,
-                atlassian_event = atlassian_event
-            )
+        send=dict(
+            atlassian_connector_key=atlassian_connector_key,
+            atlassian_event_type=atlassian_event_type,
+            atlassian_event=atlassian_event
         )
+    )
+    publish(
+        VcsTopic,
+        message,
+        channel=channel
+    )
+    return message
+
+
+def gitlab_repository_event(event_type, connector_key, payload, channel=None):
+    message = GitlabRepositoryEvent(
+        send=dict(
+            event_type=event_type,
+            connector_key=connector_key,
+            payload=payload
+        )
+    )
+    publish(
+        VcsTopic,
+        message,
+        channel=channel
+    )
+    return message
+
+
+def remote_repository_push_event(connector_key, repository_source_id, channel=None):
+    message = RemoteRepositoryPushEvent(
+        send=dict(
+            connector_key=connector_key,
+            repository_source_id=repository_source_id
+        )
+    )
     publish(
         VcsTopic,
         message,
