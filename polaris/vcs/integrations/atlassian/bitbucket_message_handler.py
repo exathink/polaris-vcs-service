@@ -7,12 +7,11 @@
 # confidential.
 
 # Author: Krishna Kumar
-
+import logging
 import json
-from polaris.repos.db.model import Repository
-from polaris.vcs.db import api
-from polaris.common import db
-from polaris.utils.exceptions import ProcessingException
+from polaris.vcs.messaging import publish
+
+logger = logging.getLogger('polaris.vcs.integrations.bitbucket.message_handler')
 
 
 def handle_atlassian_connect_repository_event(connector_key, event_type, event):
@@ -23,16 +22,6 @@ def handle_atlassian_connect_repository_event(connector_key, event_type, event):
 def handle_repo_push(connector_key, event):
     payload = json.loads(event)
     repo_source_id = payload['data']['repository']['uuid']
-    repo = find_repository(connector_key, repo_source_id)
+    logger.info(f'Received repo:push event for bitbucket connector {connector_key}')
 
-    if repo is not None:
-        return api.handle_repository_push(repo.organization_key, repo.key)
-    else:
-        raise ProcessingException(f"Could not find repository with connectory key "
-                                  f"{connector_key} and source_id {repo_source_id}")
-
-
-def find_repository(connector_key, source_id):
-    with db.orm_session() as session:
-        session.expire_on_commit = False
-        return Repository.find_by_connector_key_source_id(session, connector_key, source_id)
+    publish.remote_repository_push_event(connector_key, repo_source_id)

@@ -51,6 +51,10 @@ def import_repositories(organization_key, connector_key, repository_keys):
             return result['repositories']
 
 
+def handle_remote_repository_push(connector_key, repository_source_id):
+    return api.handle_remote_repository_push(connector_key, repository_source_id)
+
+
 def test_vcs_connector(connector_key, join_this=None):
     with db.orm_session(join_this) as session:
         vcs_connector = connector_factory.get_connector(

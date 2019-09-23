@@ -115,17 +115,25 @@ def sync_repositories(session, organization_key, connector_key, source_repositor
                                   f"to import repositories")
 
 
+def repository_summary_columns():
+    return [
+        repositories.c.key,
+        repositories.c.name,
+        repositories.c.description,
+        repositories.c.url,
+        repositories.c.integration_type,
+        repositories.c.public,
+        repositories.c.source_id,
+        repositories.c.organization_key,
+        repositories.c.connector_key
+    ]
+
+
 def import_repositories(session, organization_key, repository_keys):
     repository_info = session.connection().execute(
-        select([
-            repositories.c.key,
-            repositories.c.name,
-            repositories.c.description,
-            repositories.c.url,
-            repositories.c.integration_type,
-            repositories.c.public,
-            repositories.c.source_id
-        ]).where(
+        select(
+            repository_summary_columns()
+        ).where(
             and_(
                 repositories.c.organization_key == organization_key,
                 repositories.c.key.in_(
@@ -175,15 +183,20 @@ def register_webhook(session, organization_key, repository_key, webhook_info):
         raise ProcessingException(f"Could not find repository with key {repository_key}")
 
 
-def handle_repository_push(session, organization_key, repository_key):
-    repo = Repository.find_by_repository_key(session, repository_key)
+def handle_remote_repository_push(session, connector_key, repository_source_id):
+    repo = Repository.find_by_connector_key_source_id(session, connector_key, repository_source_id)
     if repo is not None:
-        log.info(f'Received repository push for organization {organization_key} Repository {repo.name}')
+        log.info(f'Received repository push for organization {repo.organization_key} Repository {repo.name}')
         if repo.import_state == RepositoryImportState.CHECK_FOR_UPDATES:
             repo.import_state = RepositoryImportState.UPDATE_READY
 
         return dict(
-            success=True
+            success=True,
+            organization_key=repo.organization_key,
+            repository_key=repo.key,
         )
     else:
         raise ProcessingException(f"Could not find repository with key {repository_key}")
+
+
+
