@@ -36,6 +36,7 @@ class GitlabRepositoriesConnector(GitlabConnector):
             integration_type=VcsIntegrationTypes.gitlab.value,
             description=repo['description'],
             source_id=repo['id'],
+            polling=True,
             properties=dict(
                 ssh_url=repo['ssh_url_to_repo'],
                 homepage=repo['web_url'],

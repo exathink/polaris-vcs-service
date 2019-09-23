@@ -55,7 +55,6 @@ def sync_repositories(session, organization_key, connector_key, source_repositor
                     created_at=datetime.utcnow(),
                     updated_at=datetime.utcnow(),
                     source_data={},
-                    polling=True,
                     **source_repo
                 )
                 for source_repo in source_repositories

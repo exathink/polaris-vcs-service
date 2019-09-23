@@ -30,6 +30,7 @@ class GithubRepositoriesConnector(GithubConnector):
             integration_type=VcsIntegrationTypes.github.value,
             description=repo.description,
             source_id=repo.id,
+            polling=True,
             properties=dict(
                 ssh_url=repo.ssh_url,
                 homepage=repo.homepage,

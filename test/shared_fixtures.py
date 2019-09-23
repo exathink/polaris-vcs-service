@@ -58,6 +58,7 @@ repositories_common_fields = dict(
     integration_type=VcsIntegrationTypes.github.value,
     description="A fancy new repo",
     source_id="10002",
+    polling=True,
     properties=dict(
         ssh_url='git@github.com:/foo.bar',
         homepage='https://www.github.com',
@@ -201,20 +202,7 @@ def setup_connectors(setup_schema):
     db.connection().execute(f"delete from integrations.connectors")
 
 
-repositories_common_fields = dict(
-    name='New Test Repo',
-    url="https://foo.bar.com",
-    public=False,
-    vendor='git',
-    integration_type=VcsIntegrationTypes.github.value,
-    description="A fancy new repo",
-    source_id="10002",
-    properties=dict(
-        ssh_url='git@github.com:/foo.bar',
-        homepage='https://www.github.com',
-        default_branch='master',
-    )
-)
+
 
 @pytest.yield_fixture
 def setup_sync_repos(setup_org_repo, setup_connectors):
