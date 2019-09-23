@@ -56,6 +56,7 @@ class RefreshConnectorRepositories(graphene.Mutation):
 
 class ImportRepositoriesInput(graphene.InputObjectType):
     organization_key = graphene.String(required=True)
+    connector_key = graphene.String(required=True)
     repository_keys = graphene.List(graphene.String, required=True)
 
 
@@ -72,6 +73,7 @@ class ImportRepositories(graphene.Mutation):
 
         imported_repositories = commands.import_repositories(
             organization_key,
+            import_repositories_input['connector_key'],
             import_repositories_input['repository_keys']
         )
         return ImportRepositories(
