@@ -11,10 +11,11 @@
 import logging
 
 from polaris.messaging.topics import TopicSubscriber, VcsTopic
-from polaris.vcs.messaging.messages import AtlassianConnectRepositoryEvent
+from polaris.vcs.messaging.messages import AtlassianConnectRepositoryEvent, GitlabRepositoryEvent, RemoteRepositoryPushEvent
 from polaris.messaging.utils import raise_message_processing_error
-
+from polaris.vcs import commands
 from polaris.vcs.integrations.atlassian import bitbucket_message_handler
+from polaris.vcs.integrations.gitlab import gitlab_message_handler
 logger = logging.getLogger('polaris.vcs.messaging.vcs_topic_subscriber')
 
 
@@ -24,7 +25,9 @@ class VcsTopicSubscriber(TopicSubscriber):
             topic=VcsTopic(channel, create=True),
             subscriber_queue='vcs_vcs',
             message_classes=[
-                AtlassianConnectRepositoryEvent
+                AtlassianConnectRepositoryEvent,
+                GitlabRepositoryEvent,
+                RemoteRepositoryPushEvent,
             ],
             publisher=publisher,
             exclusive=False
@@ -33,6 +36,11 @@ class VcsTopicSubscriber(TopicSubscriber):
     def dispatch(self, channel, message):
         if AtlassianConnectRepositoryEvent.message_type == message.message_type:
             return self.process_atlassian_connect_repository_event(message)
+        elif GitlabRepositoryEvent.message_type == message.message_type:
+            return self.process_gitlab_repository_event(message)
+        elif RemoteRepositoryPushEvent.message_type == message.message_type:
+            return self.process_remote_repository_push_event(message)
+
 
     @staticmethod
     def process_atlassian_connect_repository_event(message):
@@ -52,3 +60,35 @@ class VcsTopicSubscriber(TopicSubscriber):
             )
         except Exception as exc:
             raise_message_processing_error(message, 'Failed to process repository event', str(exc))
+
+    @staticmethod
+    def process_gitlab_repository_event(message):
+        connector_key = message['connector_key']
+        event_type = message['event_type']
+        payload = message['payload']
+
+
+        logger.info(
+            f"Processing  gitlab event {message.message_type}: "
+        )
+        try:
+            return gitlab_message_handler.handle_gitlab_event(
+                connector_key,
+                event_type,
+                payload
+            )
+        except Exception as exc:
+            raise_message_processing_error(message, 'Failed to process gitlab repository event', str(exc))
+
+    @staticmethod
+    def process_remote_repository_push_event(message):
+        connector_key = message['connector_key']
+        repository_source_id = message['repository_source_id']
+
+        logger.info(
+            f"Processing  repository push event for connector {connector_key} "
+        )
+        try:
+            return commands.handle_remote_repository_push(connector_key, repository_source_id)
+        except Exception as exc:
+            raise_message_processing_error(message, 'Failed to process repository push event', str(exc))
