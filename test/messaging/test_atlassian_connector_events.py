@@ -9,13 +9,14 @@
 # Author: Krishna Kumar
 
 import json
-from sqlalchemy import select, func
-from polaris.vcs.messaging.messages import AtlassianConnectRepositoryEvent
-from polaris.messaging.test_utils import mock_channel, fake_send
+from unittest.mock import patch
+from polaris.common.enums import VcsIntegrationTypes
+from polaris.messaging.test_utils import mock_channel, fake_send, assert_topic_and_message
+from polaris.messaging.topics import VcsTopic
+from polaris.repos.db.schema import RepositoryImportState
+from polaris.vcs.messaging.messages import AtlassianConnectRepositoryEvent, RemoteRepositoryPushEvent
 from polaris.vcs.messaging.subscribers.vcs_topic_subscriber import VcsTopicSubscriber
 from test.shared_fixtures import *
-from polaris.repos.db.schema import RepositoryImportState
-from polaris.common.enums import VcsIntegrationTypes
 
 bitbucket_connector_key = uuid.uuid4()
 bitbucket_repo_source_id = uuid.uuid4()
@@ -53,9 +54,7 @@ def setup_repo_waiting_for_update(setup_schema, cleanup):
 
 class TestRepositoryPush:
 
-    def it_processes_the_message_correctly(self, setup_repo_waiting_for_update):
-        repo, org = setup_repo_waiting_for_update
-
+    def it_publishes_a_generic_repository_push_event_when_it_gets_a_bitbucket_push_event(self, setup_repo_waiting_for_update):
         payload = dict(
             atlassian_connector_key=bitbucket_connector_key,
             atlassian_event_type="repo:push",
@@ -70,11 +69,10 @@ class TestRepositoryPush:
 
         channel = mock_channel()
         message = fake_send(AtlassianConnectRepositoryEvent(send=payload))
-        result = VcsTopicSubscriber(channel).dispatch(channel, message)
-        assert result['success']
-        assert db.connection().execute(
-            f"select import_state from repos.repositories where source_id='{bitbucket_repo_source_id}'"
-        ).scalar() == RepositoryImportState.UPDATE_READY
+        with patch('polaris.vcs.messaging.publish.publish') as publish:
+            VcsTopicSubscriber(channel).dispatch(channel, message)
+
+            assert_topic_and_message(publish, VcsTopic, RemoteRepositoryPushEvent)
 
 
 

@@ -17,7 +17,7 @@ from polaris.vcs.service.graphql import schema
 class TestImportRepositoriesMutation:
 
     def it_returns_the_imported_repository_keys(self, setup_sync_repos):
-        organization_key, _ = setup_sync_repos
+        organization_key, connectors = setup_sync_repos
         repository_key = test_repository_key
 
         client = Client(schema)
@@ -32,6 +32,7 @@ class TestImportRepositoriesMutation:
                 }
             """, variable_values=dict(
                 importRepositoriesInput=dict(
+                    connectorKey=str(connectors['github']),
                     organizationKey=str(organization_key),
                     repositoryKeys=[str(repository_key)]
                 )

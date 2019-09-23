@@ -50,7 +50,7 @@ class TestHandleRepositoryPush:
     def it_updates_the_import_state_if_it_is_waiting_for_updates(self, setup_repo_waiting_for_update):
         repo, org = setup_repo_waiting_for_update
 
-        result = api.handle_repository_push(org.organization_key, repo.key)
+        result = api.handle_remote_repository_push(github_connector_key, test_repository_source_id)
         assert result['success']
         assert db.connection().execute(
             f"select import_state from repos.repositories where key='{repo.key}'"

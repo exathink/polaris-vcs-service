@@ -20,17 +20,17 @@ from polaris.messaging.messages import RepositoriesImported
 class TestImportRepositories:
 
     def it_returns_the_imported_repositories(self, setup_sync_repos):
-        organization_key, _ = setup_sync_repos
+        organization_key, connectors = setup_sync_repos
         repository_key = test_repository_key
 
         with patch('polaris.vcs.commands.publish.repositories_imported'):
-            repositories = commands.import_repositories(organization_key, [repository_key])
+            repositories = commands.import_repositories(organization_key, connectors['github'], [repository_key])
             assert len(repositories) == 1
 
     def it_publishes_the_repositories_imported_message(self, setup_sync_repos):
-        organization_key, _ = setup_sync_repos
+        organization_key, connectors = setup_sync_repos
         repository_key = test_repository_key
 
         with patch('polaris.vcs.messaging.publish.publish') as publish:
-            commands.import_repositories(organization_key, [repository_key])
+            commands.import_repositories(organization_key, connectors['github'], [repository_key])
             assert_topic_and_message(publish, VcsTopic, RepositoriesImported)
