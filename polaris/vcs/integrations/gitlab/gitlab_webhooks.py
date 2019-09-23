@@ -9,7 +9,8 @@
 # Author: Krishna Kumar
 
 import logging
-from flask import Blueprint
+from flask import Blueprint, request
+from polaris.vcs.messaging import publish
 
 logger = logging.getLogger('polaris.vcs.integrations.gitlab.webhook')
 
@@ -20,7 +21,10 @@ webhook_paths = {
 }
 
 
-@webhook.route(webhook_paths['repository:push'], methods=('GET', 'POST'))
-def repository_push():
+@webhook.route(f"{webhook_paths['repository:push']}/<connector_key>/", methods=('GET', 'POST'))
+def repository_push(connector_key):
     logger.info('Received webhook: repository push')
-    return 'ok'
+
+    publish.gitlab_repository_event('repository:push', connector_key, request.data)
+    return ''
+
