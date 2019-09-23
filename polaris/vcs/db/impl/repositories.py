@@ -20,8 +20,10 @@ from polaris.repos.db.model import repositories, Repository
 from polaris.repos.db.schema import RepositoryImportState
 from polaris.utils.exceptions import ProcessingException
 from polaris.common.db import row_proxy_to_dict
+from polaris.utils.collections import dict_merge
 
 log = logging.getLogger('polaris.vcs.db.impl.repositories')
+
 
 def sync_repositories(session, organization_key, connector_key, source_repositories):
     if organization_key is not None:
@@ -52,6 +54,8 @@ def sync_repositories(session, organization_key, connector_key, source_repositor
                     update_ready_state=RepositoryImportState.UPDATE_READY,
                     created_at=datetime.utcnow(),
                     updated_at=datetime.utcnow(),
+                    source_data={},
+                    polling=True,
                     **source_repo
                 )
                 for source_repo in source_repositories
@@ -158,8 +162,20 @@ def import_repositories(session, organization_key, repository_keys):
     )
 
 
-def handle_repository_push(session, organization_key, repository_key):
+def register_webhook(session, organization_key, repository_key, webhook_info):
+    repo = Repository.find_by_repository_key(session, repository_key)
+    if repo is not None:
+        log.info(f'Registering webhook for organization {organization_key} Repository {repo.name}')
+        source_data = dict(repo.source_data)
+        source_data['webhooks'] = dict_merge(source_data.get('webhooks', {}), webhook_info['webhooks'])
+        repo.source_data = source_data
+        if 'repository_push' in webhook_info['webhooks']:
+            repo.polling = False
+    else:
+        raise ProcessingException(f"Could not find repository with key {repository_key}")
 
+
+def handle_repository_push(session, organization_key, repository_key):
     repo = Repository.find_by_repository_key(session, repository_key)
     if repo is not None:
         log.info(f'Received repository push for organization {organization_key} Repository {repo.name}')

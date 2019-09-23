@@ -35,6 +35,14 @@ def import_repositories(organization_key, repository_keys):
     except Exception as e:
         return db.failure_message('Import Repositories', e)
 
+def register_webhook(organization_key, repository_key, webhook_info):
+    try:
+        with db.orm_session() as session:
+            return repositories.register_webhook(session, organization_key, repository_key, webhook_info)
+    except SQLAlchemyError as exc:
+        return db.process_exception("Register Webhook", exc)
+    except Exception as e:
+        return db.failure_message('Register Webhook', e)
 
 def handle_repository_push(organization_key, repository_key):
     try:
