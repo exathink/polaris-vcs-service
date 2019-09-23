@@ -13,6 +13,10 @@ import requests
 from polaris.integrations.gitlab import GitlabConnector
 from polaris.common.enums import VcsIntegrationTypes
 from polaris.utils.exceptions import ProcessingException
+from polaris.utils.config import get_config_provider
+from .gitlab_webhooks import webhook_paths
+config_provider = get_config_provider()
+
 
 logger = logging.getLogger('polaris.vcs.integrations.github')
 
@@ -21,6 +25,7 @@ class GitlabRepositoriesConnector(GitlabConnector):
 
     def __init__(self, connector):
         super().__init__(connector)
+        self.webhook_secret = connector.webhook_secret
 
     def map_repository_info(self, repo):
         return dict(
@@ -38,6 +43,40 @@ class GitlabRepositoriesConnector(GitlabConnector):
                 path_with_namespace=repo['path_with_namespace']
             ),
         )
+
+    def register_repository_push_hook(self, repository):
+        repo_source_id = repository['source_id']
+        repository_push_callback_url = f"{config_provider.get('GITLAB_WEBHOOKS_BASE_URL')}" \
+                                       f"{webhook_paths['repository:push']}"
+
+        add_hook_url = f"{self.base_url}/projects/{repo_source_id}/hooks"
+
+        response = requests.post(
+            add_hook_url,
+            headers={"Authorization": f"Bearer {self.personal_access_token}"},
+            data=dict(
+                id=repo_source_id,
+                url=repository_push_callback_url,
+                push_events=True,
+                enable_ssl_verification=True,
+                token=self.webhook_secret
+            )
+        )
+        if response.ok:
+            result = response.json()
+            return dict(
+                webhooks=dict(
+                    repository_push=dict(
+                        source_hook_id=result['id'],
+                        created_at=result['created_at']
+                    )
+                )
+            )
+        else:
+            raise ProcessingException(
+                f"Failed to register repository:push webhook for repository {repository['name']} ({repo_source_id})"
+                f'{response.status_code} {response.text}'
+            )
 
     def fetch_repositories(self):
         fetch_repos_url = f'{self.base_url}/projects'
