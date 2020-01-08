@@ -25,13 +25,13 @@ class BitBucketConnectorContext:
     base_url = config_provider.get('BITBUCKET_CONNECTOR_BASE_URL')
     mount_path = config_provider.get('MOUNT_PATH')
 
-    app_name = "Urjuna Connector for BitBucket"
-    addon_name = "Urjuna Connector for BitBucket"
+    app_name = "Polaris Flow Connector for BitBucket"
+    addon_name = "Polaris Flow Connector for BitBucket"
     addon_key = config_provider.get('BITBUCKET_CONNECTOR_APP_KEY')
     if addon_key is None:
         raise ConfigurationException("BITBUCKET_CONNECTOR_APP_KEY must be specified")
 
-    addon_description = "Urjuna Connector for BitBucket"
+    addon_description = "Polaris Flow Connector for BitBucket"
     addon_scopes = ['repository', 'issue', 'pullrequest', 'webhook']
     addon_version = 1
 
