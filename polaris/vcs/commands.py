@@ -8,13 +8,16 @@
 
 # Author: Krishna Kumar
 
+import logging
 from polaris.common import db
 import polaris.vcs.db.impl.repositories
 from polaris.vcs import connector_factory
 from polaris.integrations.db.api import tracking_receipt_updates
 from polaris.vcs.db import api
 from polaris.vcs.messaging import publish
+from polaris.utils.exceptions import ProcessingException
 
+log = logging.getLogger('polaris.vcs.service.commands')
 
 def sync_repositories(connector_key, tracking_receipt_key=None):
     connector = connector_factory.get_connector(connector_key=connector_key)
@@ -37,8 +40,11 @@ def register_repository_push_webhooks(organization_key, connector_key, repositor
     connector = connector_factory.get_connector(connector_key=connector_key)
     if connector and getattr(connector, 'register_repository_push_hook', None):
         for repo in repository_summaries:
-            webhook_info = connector.register_repository_push_hook(repo)
-            api.register_webhook(organization_key, repo['key'], webhook_info)
+            try:
+                webhook_info = connector.register_repository_push_hook(repo)
+                api.register_webhook(organization_key, repo['key'], webhook_info)
+            except ProcessingException as e:
+                log.error(e)
 
 
 def import_repositories(organization_key, connector_key, repository_keys):
