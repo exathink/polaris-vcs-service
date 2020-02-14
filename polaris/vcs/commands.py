@@ -55,6 +55,9 @@ def import_repositories(organization_key, connector_key, repository_keys):
             register_repository_push_webhooks(organization_key, connector_key, imported_repositories)
             publish.repositories_imported(organization_key, imported_repositories)
             return result['repositories']
+        else:
+            log.error(f"Import repositories failed: {result.get('exception')}")
+            raise ProcessingException(f"Import repositories failed: {result.get('exception')}")
 
 
 def handle_remote_repository_push(connector_key, repository_source_id):
