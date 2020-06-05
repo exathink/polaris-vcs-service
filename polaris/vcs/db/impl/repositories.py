@@ -110,7 +110,7 @@ def sync_repositories(session, organization_key, connector_key, source_repositor
             ])
 
     else:
-        raise ProcessingException(f"Connector {connector.key} must specify an organization key "
+        raise ProcessingException(f"Connector {connector_key} must specify an organization key "
                                   f"to import repositories")
 
 
