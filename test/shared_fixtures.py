@@ -11,11 +11,11 @@
 import uuid
 import pytest
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from polaris.common import db
 from polaris.common.enums import VcsIntegrationTypes
 from polaris.repos.db.model import Organization, Repository
-from polaris.repos.db.schema import commits,contributors, contributor_aliases, RepositoryImportState
+from polaris.repos.db.schema import commits, contributors, contributor_aliases, RepositoryImportState
 from polaris.integrations.db import model as integrations_model
 
 test_account_key = uuid.uuid4()
@@ -66,6 +66,20 @@ repositories_common_fields = dict(
     )
 )
 
+pull_requests_common_fields = dict(
+    title='New Test PR',
+    description='An awesome new feature',
+    web_url='https://foo.bar.com',
+    source_pull_request_id='100',
+    soure_created_at=datetime.utcnow() - timedelta(hours=5),
+    source_last_updated=datetime.utcnow(),
+    source_state='opened',
+    source_branch='PO-100',
+    target_branch='master',
+    source_repository_id='1'
+)
+
+
 @pytest.yield_fixture
 def cleanup():
     yield
@@ -79,30 +93,27 @@ def cleanup():
     db.connection().execute("delete from repos.organizations")
 
 
-
-
 @pytest.yield_fixture()
 def setup_org_repo(setup_schema, cleanup):
-
     with db.orm_session() as session:
-        session.expire_on_commit=False
+        session.expire_on_commit = False
         organization = Organization(
             organization_key=test_organization_key,
             name='test-org',
             public=False
         )
         repository = Repository(
-                connector_key=github_connector_key,
-                organization_key=test_organization_key,
-                key=test_repository_key,
-                name=test_repository_name,
-                source_id=test_repository_source_id,
-                import_state=0,
-                description='A neat new repo',
-                integration_type=VcsIntegrationTypes.github.value,
-                url='https://foo.bar.com'
+            connector_key=github_connector_key,
+            organization_key=test_organization_key,
+            key=test_repository_key,
+            name=test_repository_name,
+            source_id=test_repository_source_id,
+            import_state=0,
+            description='A neat new repo',
+            integration_type=VcsIntegrationTypes.github.value,
+            url='https://foo.bar.com'
 
-            )
+        )
         organization.repositories.append(
             repository
         )
@@ -110,11 +121,6 @@ def setup_org_repo(setup_schema, cleanup):
         session.flush()
 
     yield repository, organization
-
-
-
-
-
 
 
 @pytest.yield_fixture()
@@ -149,9 +155,9 @@ def setup_commits(setup_org_repo):
                 repository_id=repository.id,
                 key=uuid.uuid4().hex,
                 source_commit_id='XXXX',
-                commit_message = 'A Change. Fixes issue #1000',
-                committer_alias_id = contributor_alias_id,
-                author_alias_id = contributor_alias_id,
+                commit_message='A Change. Fixes issue #1000',
+                committer_alias_id=contributor_alias_id,
+                author_alias_id=contributor_alias_id,
                 **commit_common_fields
             ),
             dict(
@@ -163,7 +169,7 @@ def setup_commits(setup_org_repo):
                 author_alias_id=contributor_alias_id,
                 **commit_common_fields
             )
-                ]
+        ]
         session.connection.execute(
             commits.insert(inserted_commits)
         )
@@ -171,14 +177,8 @@ def setup_commits(setup_org_repo):
     yield inserted_commits
 
 
-
-
-
-
 @pytest.yield_fixture
 def setup_connectors(setup_schema):
-
-
     with db.orm_session() as session:
         session.expire_on_commit = False
         session.add(
@@ -194,14 +194,11 @@ def setup_connectors(setup_schema):
             )
         )
 
-
     yield dict(
         github=github_connector_key
     )
 
     db.connection().execute(f"delete from integrations.connectors")
-
-
 
 
 @pytest.yield_fixture
@@ -210,7 +207,6 @@ def setup_sync_repos(setup_org_repo, setup_connectors):
     connectors = setup_connectors
 
     yield organization.organization_key, connectors
-
 
 
 @pytest.yield_fixture

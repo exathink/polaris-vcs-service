@@ -37,20 +37,14 @@ def sync_repositories(connector_key, tracking_receipt_key=None):
                 )
 
 
-def import_pull_requests(repository_key, connector_key, tracking_receipt_key=None):
+def sync_pull_requests(repository_key, connector_key, created_after):
     connector = connector_factory.get_connector(connector_key=connector_key)
     if connector:
-        with tracking_receipt_updates(
-                tracking_receipt_key,
-                start_info=f"Started refreshing pull requests for {connector.name}",
-                success_info=f"Finished refreshing pull requests for {connector.name}",
-                error_info=f"Error refreshing pull requests for {connector.name}"
-        ):
-            yield polaris.vcs.db.api.import_pull_requests(
-                connector.organization_key,
-                repository_key,
-                connector.fetch_pull_requests_from_source(repository_key)
-            )
+        yield polaris.vcs.db.api.import_pull_requests(
+            connector.organization_key,
+            repository_key,
+            connector.fetch_pull_requests_from_source(repository_key, created_after)
+        )
 
 
 def register_repository_push_webhooks(organization_key, connector_key, repository_summaries):
