@@ -118,8 +118,8 @@ class GitlabRepositoriesConnector(GitlabConnector):
             source_merged_at=pull_request['merged_at'],
             source_branch=pull_request['source_branch'],
             target_branch=pull_request['target_branch'],
-            source_repository_id=pull_request['source_project_id'],
-            target_repository_id=pull_request['target_project_id'],
+            source_repository_source_id=pull_request['source_project_id'],
+            target_repository_source_id=pull_request['target_project_id'],
             web_url=pull_request['web_url']
         )
 

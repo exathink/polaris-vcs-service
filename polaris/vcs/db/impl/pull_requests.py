@@ -15,7 +15,7 @@ from polaris.repos.db.model import Repository, pull_requests
 from polaris.repos.db.schema import branches
 from polaris.common import db
 
-from sqlalchemy import and_
+from sqlalchemy import select, and_
 
 
 log = logging.getLogger('polaris.vcs.db.impl.pull_requests')
@@ -24,7 +24,7 @@ log = logging.getLogger('polaris.vcs.db.impl.pull_requests')
 def import_pull_requests(session, organization_key, repository_key, source_pull_requests):
     if organization_key and repository_key:
         repository = Repository.find_by_repository_key(repository_key)
-        source_repo_id = repository.source_id
+        repository_id = repository.id
         # create a temp table for pull requests and insert source_pull_requests
         pull_requests_temp = db.temp_table_from(
             pull_requests,
@@ -32,7 +32,11 @@ def import_pull_requests(session, organization_key, repository_key, source_pull_
             exclude_columns=[
                 pull_requests.c.id,
                 pull_requests.c.last_sync,
-                pull_requests.c.deleted_at
+                pull_requests.c.deleted_at,
+                pull_requests.c.source_repository_id,
+                pull_requests.c.target_repository_id,
+                pull_requests.c.source_branch_latest_commit,
+                pull_requests.c.source_branch_latest_seq_no
             ]
         )
 
@@ -40,6 +44,7 @@ def import_pull_requests(session, organization_key, repository_key, source_pull_
         session.connection().execute(
             pull_requests_temp.insert([
                 dict(
+                    repository_id=repository_id,
                     key=uuid.uuid4(),
                     last_updated=datetime.utcnow(),
                     **source_pr
@@ -48,38 +53,51 @@ def import_pull_requests(session, organization_key, repository_key, source_pull_
             ])
         )
         # Add branch and commit information
-        source_branches = branches.alias('source_branches')
-        target_branches = branches.alias('target_branches')
-        pull_requests_before_insert = session.connection().execute(
-            select([
+        source_branch = branches.alias('source_branch')
+        target_branch = branches.alias('target_branch')
+        source_repo = repository.alias('source_repo')
+        target_repo = repository.alias('target_repo')
+        pull_requests_before_insert = select([
                 *pull_requests_temp.columns,
-                source_branches.c.id.label('source_branch_id'),
-                target_branches.c.id.label('target_branch_id'),
-                source_branches.c.latest_commit.label('source_branch_latest_commit'),
-                target_branches.c.latest_commit.label('target_branch_latest_commit'),
-                # FIXME: Not sure if next_seq_no is what we intend to store as latest seq no. Discuss.
-                source_branches.c.next_seq_no.label('source_branch_latest_seq_no'),
-                target_branches.c.next_seq_no.label('target_branch_latest_seq_no')
+                source_repo.c.id('source_repository_id'),
+                target_repo.c.id('target_repository_id'),
+                source_branch.c.id.label('source_branch_id'),
+                target_branch.c.id.label('target_branch_id'),
+            # TODO: Need to join with branch_commits and commits tables
+            # to find the latest commit and seq no
+            # Commit here is the source commit hash
+                source_branch.c.latest_commit.label('source_branch_latest_commit'),
+                target_branch.c.latest_commit.label('target_branch_latest_commit'),
+            (source_branch.c.next_seq_no-1).label('source_branch_latest_seq_no'),
+            (target_branch.c.next_seq_no-1).label('target_branch_latest_seq_no')
             ]).select_from(
                 pull_requests_temp.join(
-                    source_branches,
+                    source_repo, source_repo.c.source_id == pull_requests_temp.c.source_repository_source_id
+                ).join(
+                    source_branch,
                     and_(
-                        source_branches.c.repository_id == pull_requests_temp.c.repository_id,
-                        source_branches.c.name == pull_requests_temp.c.source_branch
+                        source_branch.c.repository_id == source_repo.c.id,
+                        source_branch.c.name == pull_requests_temp.c.source_branch
                     )
                 ).join(
-                    target_branches,
+                    target_repo, target_repo.c.source_id == pull_requests_temp.c.target_repository_source_id
+                ).join(
+                    target_branch,
                     and_(
-                        target_branches.c.repository_id == pull_requests_temp.c.repository_id,
-                        target_branches.c.name == pull_requests_temp.c.target_branch
+                        target_branch.c.repository_id == target_repo.c.id,
+                        target_branch.c.name == pull_requests_temp.c.target_branch
                     )
                 )
-            )
-        ).cte('pull_requests_before_insert')
+            ).cte('pull_requests_before_insert')
+
+        # To find latest commit and latest seq no
+        #
         # insert into the repos.pull_requests table
 
+        # TODO: Convert to upsert
         session.connection().execute(
             pull_requests.insert().from_select([
+                'repository_id',
                 'key',
                 'source_pull_request_id',
                 'title',
@@ -97,12 +115,13 @@ def import_pull_requests(session, organization_key, repository_key, source_pull_
                 'source_branch_latest_seq_no',
                 'target_branch',
                 'target_branch_id',
-                'target_branch_latest_commit',
-                'target_branch_latest_seq_no',
+                'source_repository_source_id',
+                'target_repository_source_id',
                 'source_repository_id',
                 'target_repository_id'
             ], select(
                 [
+                    pull_requests_before_insert.c.repository_id,
                     pull_requests_before_insert.c.key,
                     pull_requests_before_insert.c.source_pull_request_id,
                     pull_requests_before_insert.c.title,
@@ -120,14 +139,11 @@ def import_pull_requests(session, organization_key, repository_key, source_pull_
                     pull_requests_before_insert.c.source_branch_latest_seq_no,
                     pull_requests_before_insert.c.target_branch,
                     pull_requests_before_insert.c.target_branch_id,
-                    pull_requests_before_insert.c.target_branch_latest_commit,
-                    pull_requests_before_insert.c.target_branch_latest_seq_no,
+                    pull_requests_before_insert.c.source_repository_source_id,
+                    pull_requests_before_insert.c.target_repository_source_id,
                     pull_requests_before_insert.c.source_repository_id,
                     pull_requests_before_insert.c.target_repository_id
                 ]
-            ).where(
-                # FIXME: Clarify the condition when we want to keep a pull request
-                pull_requests_before_insert.c.source_repository_id == pull_requests_before_insert.c.target_repository_id
             )
             )
         )
