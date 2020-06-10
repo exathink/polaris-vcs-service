@@ -40,7 +40,6 @@ def sync_repositories(session, organization_key, connector_key, source_repositor
                 repositories.c.failures_since_last_checked,
                 repositories.c.organization_id
             ]
-
         )
         repositories_temp.create(session.connection(), checkfirst=True)
         session.connection().execute(

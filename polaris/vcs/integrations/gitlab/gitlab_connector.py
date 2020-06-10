@@ -108,7 +108,7 @@ class GitlabRepositoriesConnector(GitlabConnector):
 
     def map_pull_request_info(self, pull_request):
         return dict(
-            source_pull_request_id=pull_request['id'],
+            source_id=pull_request['id'],
             title=pull_request['title'],
             description=pull_request['description'],
             source_state=pull_request['state'],
