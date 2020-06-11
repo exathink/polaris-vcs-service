@@ -17,7 +17,6 @@ from polaris.common import db
 
 from sqlalchemy import select, insert, and_, Column, String, Integer
 
-
 log = logging.getLogger('polaris.vcs.db.impl.pull_requests')
 
 
@@ -58,23 +57,24 @@ def sync_pull_requests(session, organization_key, repository_key, source_pull_re
         )
 
         # Add source and target repo ids
-        source_repos = repositories.alias('source_repos')
-        target_repos = repositories.alias('target_repos')
+        # source_repos = repositories.alias('source_repos')
+        # target_repos = repositories.alias('target_repos')
 
         session.connection().execute(
             pull_requests_temp.update().where(
-                and_(
-                    source_repos.c.source_id == pull_requests_temp.c.source_repository_source_id,
-                    target_repos.c.source_id == pull_requests_temp.c.target_repository_source_id
-                )
+                repositories.c.source_id == pull_requests_temp.c.source_repository_source_id,
             ).values(
-                source_repository_id=source_repos.c.id,
-                target_repository_id=target_repos.c.id
+                source_repository_id=repositories.c.id,
             )
         )
 
-        # Flush session so that above repo ids are available for the following update
-        session.flush()
+        session.connection().execute(
+            pull_requests_temp.update().where(
+                repositories.c.source_id == pull_requests_temp.c.target_repository_source_id
+            ).values(
+                target_repository_id=repositories.c.id
+            )
+        )
 
         # Resolving branches information
         # FIXME: Adding the latest commit and seq no from branches to fill in non-nullable fields \
@@ -94,7 +94,7 @@ def sync_pull_requests(session, organization_key, repository_key, source_pull_re
                 source_branch_id=source_branch.c.id,
                 target_branch_id=target_branch.c.id,
                 source_branch_latest_commit=source_branch.c.latest_commit,
-                source_branch_latest_seq_no=source_branch.c.next_seq_no-1
+                source_branch_latest_seq_no=source_branch.c.next_seq_no - 1
             )
         )
 
