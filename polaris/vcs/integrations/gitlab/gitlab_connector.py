@@ -123,7 +123,8 @@ class GitlabRepositoriesConnector(GitlabConnector):
             web_url=pull_request['web_url']
         )
 
-    def fetch_pull_requests(self, repository, created_after=datetime.utcnow()-timedelta(days=90)):
+    def fetch_pull_requests(self, repository):
+        created_after = datetime.utcnow() - timedelta(days=90)
         source_repo_id = repository['source_id']
         fetch_pull_requests_url = f'{self.base_url}/projects/{source_repo_id}/merge_requests'
         while fetch_pull_requests_url is not None:

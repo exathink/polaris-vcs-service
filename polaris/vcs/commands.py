@@ -16,6 +16,7 @@ from polaris.integrations.db.api import tracking_receipt_updates
 from polaris.vcs.db import api
 from polaris.vcs.messaging import publish
 from polaris.utils.exceptions import ProcessingException
+from polaris.repos.db.model import Repository
 
 log = logging.getLogger('polaris.vcs.service.commands')
 
@@ -37,14 +38,19 @@ def sync_repositories(connector_key, tracking_receipt_key=None):
                 )
 
 
-def sync_pull_requests(repository_key, connector_key, created_after):
-    connector = connector_factory.get_connector(connector_key=connector_key)
-    if connector:
-        yield polaris.vcs.db.api.sync_pull_requests(
-            connector.organization_key,
-            repository_key,
-            connector.fetch_pull_requests_from_source(repository_key, created_after)
-        )
+def sync_pull_requests(repository_key):
+    with db.orm_session() as session:
+        # FIXME: Need an alternate to get connector key
+        repository = Repository.find_by_repository_key(session, repository_key)
+        if repository:
+            connector_key = repository.connector_key
+            connector = connector_factory.get_connector(connector_key=connector_key)
+            if connector:
+                yield polaris.vcs.db.api.sync_pull_requests(
+                    connector.organization_key,
+                    repository_key,
+                    connector.fetch_pull_requests_from_source(repository_key)
+                )
 
 
 def register_repository_push_webhooks(organization_key, connector_key, repository_summaries):

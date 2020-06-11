@@ -101,12 +101,10 @@ class VcsTopicSubscriber(TopicSubscriber):
     @staticmethod
     def process_repositories_imported(message):
         imported_repositories = message['imported_repositories']
-
         logger.info(f"Processing repositories imported for {imported_repositories}")
         try:
-            pull_requests = []
             for repo in imported_repositories:
-                pull_requests.extend(commands.sync_pull_requests(repository_key=repo['key'], connector_key=repo['integration_type']))
-            return pull_requests
+                # FIXME: Not passing connector_key but finding through repository in the command
+                yield commands.sync_pull_requests(repository_key=repo['key'])
         except Exception as exc:
             raise_message_processing_error(message, 'Failed to process repositories imported', str(exc))

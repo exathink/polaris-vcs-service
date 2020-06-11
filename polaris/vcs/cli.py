@@ -16,6 +16,7 @@ from polaris.common import db
 from polaris.messaging.topics import VcsTopic
 from polaris.messaging.messages import RepositoriesImported
 from polaris.messaging.utils import publish
+from polaris.common.enums import VcsIntegrationTypes
 
 from polaris.utils.logging import config_logging
 
@@ -24,7 +25,17 @@ logger = logging.getLogger('polaris.vcs_service.cli')
 
 db.init()
 
-def sync_pull_requests(organization_key=None, imported_repositories=None):
+def sync_pull_requests(organization_key=None):
+    imported_repositories = [
+        dict(
+            name='polaris-analytics-service',
+            key='f6b81d4f-bee5-44a8-9ebc-662157842839',
+            url='https://foo.bar.com',
+            description='Analytics repo',
+            public=False,
+            integration_type=VcsIntegrationTypes.gitlab.value
+        ),
+    ]
     publish(VcsTopic,
             RepositoriesImported(send=dict(organization_key=organization_key, imported_repositories=imported_repositories)))
 
