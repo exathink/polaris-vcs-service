@@ -14,7 +14,6 @@ from polaris.messaging.topics import TopicSubscriber, VcsTopic
 from polaris.vcs.messaging.messages import AtlassianConnectRepositoryEvent, GitlabRepositoryEvent, \
     RemoteRepositoryPushEvent
 from polaris.messaging.utils import raise_message_processing_error
-from polaris.messaging.messages import RepositoriesImported
 from polaris.vcs import commands
 from polaris.vcs.integrations.atlassian import bitbucket_message_handler
 from polaris.vcs.integrations.gitlab import gitlab_message_handler
@@ -30,8 +29,7 @@ class VcsTopicSubscriber(TopicSubscriber):
             message_classes=[
                 AtlassianConnectRepositoryEvent,
                 GitlabRepositoryEvent,
-                RemoteRepositoryPushEvent,
-                RepositoriesImported
+                RemoteRepositoryPushEvent
             ],
             publisher=publisher,
             exclusive=False
@@ -44,9 +42,6 @@ class VcsTopicSubscriber(TopicSubscriber):
             return self.process_gitlab_repository_event(message)
         elif RemoteRepositoryPushEvent.message_type == message.message_type:
             return self.process_remote_repository_push_event(message)
-        elif RepositoriesImported.message_type == message.message_type:
-            logger.info(f"Message: {message}")
-            return self.process_repositories_imported(message)
 
     @staticmethod
     def process_atlassian_connect_repository_event(message):
@@ -97,14 +92,3 @@ class VcsTopicSubscriber(TopicSubscriber):
             return commands.handle_remote_repository_push(connector_key, repository_source_id)
         except Exception as exc:
             raise_message_processing_error(message, 'Failed to process repository push event', str(exc))
-
-    @staticmethod
-    def process_repositories_imported(message):
-        imported_repositories = message['imported_repositories']
-        logger.info(f"Processing repositories imported for {imported_repositories}")
-        try:
-            for repo in imported_repositories:
-                # FIXME: Not passing connector_key but finding through repository in the command
-                yield commands.sync_pull_requests(repository_key=repo['key'])
-        except Exception as exc:
-            raise_message_processing_error(message, 'Failed to process repositories imported', str(exc))
