@@ -12,3 +12,4 @@
 from .analytics_topic_subscriber import AnalyticsTopicSubscriber
 from .connectors_topic_subscriber import ConnectorsTopicSubscriber
 from .vcs_topic_subscriber import VcsTopicSubscriber
+from .commits_topic_subscriber import CommitsTopicSubscriber

@@ -11,33 +11,48 @@
 import logging
 
 import argh
-
+import uuid
 from polaris.common import db
-from polaris.messaging.topics import VcsTopic
-from polaris.messaging.messages import RepositoriesImported
+from polaris.messaging.topics import CommitsTopic
+from polaris.messaging.messages import CommitHistoryImported
 from polaris.messaging.utils import publish
-from polaris.common.enums import VcsIntegrationTypes
 
 from polaris.utils.logging import config_logging
-
 
 logger = logging.getLogger('polaris.vcs_service.cli')
 
 db.init()
 
-def sync_pull_requests(organization_key=None):
-    imported_repositories = [
-        dict(
-            name='polaris-analytics-service',
-            key='f6b81d4f-bee5-44a8-9ebc-662157842839',
-            url='https://foo.bar.com',
-            description='Analytics repo',
-            public=False,
-            integration_type=VcsIntegrationTypes.gitlab.value
-        ),
-    ]
-    publish(VcsTopic,
-            RepositoriesImported(send=dict(organization_key=organization_key, imported_repositories=imported_repositories)))
+
+def sync_pull_requests(organization_key=None, repository_key=None):
+    publish(
+        CommitsTopic,
+        CommitHistoryImported(
+            send=dict(
+                organization_key=organization_key,
+                repository_key=repository_key,
+                repository_name='Pull requests',
+                total_commits=10,
+                new_commits=dict(
+                    committer_alias_key=uuid.uuid4(),
+                    author_alias_key=uuid.uuid4()
+                ),
+                new_contributors=dict(
+                    key=uuid.uuid4(),
+                    name='Test contributor',
+                    alias='Test'
+                ),
+                branch_info=dict(
+                    name="PR1",
+                    is_new=True,
+                    is_default=True,
+                    is_stale=False,
+                    remote_head=uuid.uuid4(),
+                    is_orphan=False
+                )
+            )
+        )
+    )
 
 
 if __name__ == '__main__':
