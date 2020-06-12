@@ -11,7 +11,7 @@
 import logging
 
 import argh
-import uuid
+from datetime import datetime
 from polaris.common import db
 from polaris.messaging.topics import CommitsTopic
 from polaris.messaging.messages import CommitHistoryImported
@@ -29,25 +29,34 @@ def sync_pull_requests(organization_key=None, repository_key=None):
         CommitsTopic,
         CommitHistoryImported(
             send=dict(
-                organization_key=organization_key,
-                repository_key=repository_key,
+                organization_key=str(organization_key),
+                repository_key=str(repository_key),
                 repository_name='Pull requests',
                 total_commits=10,
-                new_commits=dict(
-                    committer_alias_key=uuid.uuid4(),
-                    author_alias_key=uuid.uuid4()
-                ),
-                new_contributors=dict(
-                    key=uuid.uuid4(),
+                new_commits=[dict(
+                    key='aaaaaaaaa',
+                    source_commit_id="xxxx",
+                    commit_date=datetime.utcnow(),
+                    commit_date_tz_offset=1,
+                    author_date=datetime.utcnow(),
+                    author_date_tz_offset=1,
+                    commit_message='random',
+                    created_at=datetime.utcnow(),
+                    created_on_branch='pr1',
+                    committer_alias_key='xxxx',
+                    author_alias_key='xxxxxx'
+                )],
+                new_contributors=[dict(
+                    key='xxxxxxx',
                     name='Test contributor',
                     alias='Test'
-                ),
+                )],
                 branch_info=dict(
                     name="PR1",
                     is_new=True,
                     is_default=True,
                     is_stale=False,
-                    remote_head=uuid.uuid4(),
+                    remote_head='xxxxxxx',
                     is_orphan=False
                 )
             )
