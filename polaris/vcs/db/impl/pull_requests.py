@@ -14,15 +14,16 @@ from datetime import datetime
 from polaris.repos.db.model import Repository, pull_requests, repositories
 from polaris.repos.db.schema import branches
 from polaris.common import db
+from sqlalchemy import select, and_, Column, String, Integer
+from sqlalchemy.dialects.postgresql import insert
 
-from sqlalchemy import select, insert, and_, Column, String, Integer
 
 log = logging.getLogger('polaris.vcs.db.impl.pull_requests')
 
 
 def sync_pull_requests(session, organization_key, repository_key, source_pull_requests):
     if organization_key and repository_key:
-        repository = Repository.find_by_repository_key(repository_key)
+        repository = Repository.find_by_repository_key(session, repository_key)
         repository_id = repository.id
         # create a temp table for pull requests and insert source_pull_requests
         pull_requests_temp = db.temp_table_from(
@@ -44,21 +45,20 @@ def sync_pull_requests(session, organization_key, repository_key, source_pull_re
         )
         last_sync = datetime.utcnow()
         pull_requests_temp.create(session.connection(), checkfirst=True)
-        session.connection().execute(
-            pull_requests_temp.insert([
-                dict(
-                    repository_id=repository_id,
-                    key=uuid.uuid4(),
-                    last_sync=last_sync,
-                    **source_pr
-                )
-                for source_pr in source_pull_requests
-            ])
-        )
+        for source_prs in source_pull_requests:
+            session.connection().execute(
+                pull_requests_temp.insert([
+                    dict(
+                        repository_id=repository_id,
+                        key=uuid.uuid4(),
+                        last_sync=last_sync,
+                        **source_pr
+                    )
+                    for source_pr in source_prs
+                ])
+            )
 
         # Add source and target repo ids
-        # source_repos = repositories.alias('source_repos')
-        # target_repos = repositories.alias('target_repos')
 
         session.connection().execute(
             pull_requests_temp.update().where(
@@ -70,31 +70,37 @@ def sync_pull_requests(session, organization_key, repository_key, source_pull_re
 
         session.connection().execute(
             pull_requests_temp.update().where(
-                repositories.c.source_id == pull_requests_temp.c.target_repository_source_id
+                repositories.c.source_id == pull_requests_temp.c.target_repository_source_id,
             ).values(
-                target_repository_id=repositories.c.id
+                target_repository_id=repositories.c.id,
             )
         )
 
         # Resolving branches information
         # FIXME: Adding the latest commit and seq no from branches to fill in non-nullable fields \
         #  Will need to do more when handling commits properly
-        source_branch = branches.alias('source_branch')
-        target_branch = branches.alias('target_branch')
 
         session.connection().execute(
             pull_requests_temp.update().where(
                 and_(
-                    source_branch.c.repository_id == pull_requests_temp.c.source_repository_id,
-                    source_branch.c.name == pull_requests_temp.c.source_branch,
-                    target_branch.c.repository_id == pull_requests_temp.c.target_respository_id,
-                    target_branch.c.name == pull_requests_temp.c.target_branch
+                    branches.c.repository_id == pull_requests_temp.c.source_repository_id,
+                    branches.c.name == pull_requests_temp.c.source_branch
                 )
             ).values(
-                source_branch_id=source_branch.c.id,
-                target_branch_id=target_branch.c.id,
-                source_branch_latest_commit=source_branch.c.latest_commit,
-                source_branch_latest_seq_no=source_branch.c.next_seq_no - 1
+                source_branch_id=branches.c.id,
+                source_branch_latest_commit=branches.c.latest_commit,
+                source_branch_latest_seq_no=branches.c.next_seq_no - 1
+            )
+        )
+
+        session.connection().execute(
+            pull_requests_temp.update().where(
+                and_(
+                    branches.c.name == pull_requests_temp.c.target_branch,
+                    branches.c.repository_id == pull_requests_temp.c.target_repository_id
+                )
+            ).values(
+                target_branch_id=branches.c.id
             )
         )
 
@@ -119,7 +125,7 @@ def sync_pull_requests(session, organization_key, repository_key, source_pull_re
         session.connection().execute(
             upsert.on_conflict_do_update(
                 index_elements=['repository_id', 'source_id'],
-                set=dict(
+                set_=dict(
                     key=upsert.excluded.key,
                     title=upsert.excluded.title,
                     description=upsert.excluded.description,

@@ -37,13 +37,14 @@ def sync_repositories(connector_key, tracking_receipt_key=None):
                 )
 
 
-def sync_pull_requests(repository_key, connector_key):
+def sync_pull_requests(repository_key, connector_key, source_repo_id):
+    log.info(f'Sync pull requests starting')
     connector = connector_factory.get_connector(connector_key=connector_key)
     if connector:
         yield polaris.vcs.db.api.sync_pull_requests(
             connector.organization_key,
             repository_key,
-            connector.fetch_pull_requests_from_source(repository_key)
+            connector.fetch_pull_requests_from_source(source_repo_id)
         )
 
 

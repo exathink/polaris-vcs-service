@@ -35,7 +35,10 @@ class CommitsTopicSubscriber(TopicSubscriber):
     def dispatch(self, channel, message):
         if CommitHistoryImported.message_type == message.message_type:
             logger.info(f"Message: {message}")
-            return self.process_commit_history_imported(message)
+            # FIXME: not sure if this is the right way to call the nested iterators
+            for sync_pull_request_command in self.process_commit_history_imported(message):
+                for result in sync_pull_request_command:
+                    return result
 
 
     @staticmethod
@@ -46,6 +49,7 @@ class CommitsTopicSubscriber(TopicSubscriber):
             with db.orm_session() as session:
                 repository = Repository.find_by_repository_key(session, repository_key)
                 connector_key = repository.connector_key
-            yield commands.sync_pull_requests(repository_key=repository_key, connector_key=connector_key)
+                source_repo_id = repository.source_id
+            yield commands.sync_pull_requests(repository_key=repository_key, connector_key=connector_key, source_repo_id=source_repo_id)
         except Exception as exc:
             raise_message_processing_error(message, 'Failed to process commit history imported', str(exc))
