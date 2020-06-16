@@ -34,7 +34,6 @@ class CommitsTopicSubscriber(TopicSubscriber):
 
     def dispatch(self, channel, message):
         if CommitHistoryImported.message_type == message.message_type:
-            logger.info(f"Message: {message}")
             # Calling the nested iterators
             for sync_pull_request_command in self.process_commit_history_imported(message):
                 for result in sync_pull_request_command:
