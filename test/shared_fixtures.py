@@ -29,6 +29,7 @@ test_repository_name = 'test-repo'
 test_contributor_name = 'Joe Blow'
 
 github_connector_key = uuid.uuid4()
+gitlab_connector_key = uuid.uuid4()
 
 commit_common_fields = dict(
     commit_date=datetime.utcnow(),
@@ -70,7 +71,7 @@ pull_requests_common_fields = dict(
     title='New Test PR',
     description='An awesome new feature',
     web_url='https://foo.bar.com',
-    source_pull_request_id='100',
+    source_id='100',
     soure_created_at=datetime.utcnow() - timedelta(hours=5),
     source_last_updated=datetime.utcnow(),
     source_state='opened',
@@ -89,6 +90,7 @@ def cleanup():
     db.connection().execute("delete from repos.commits")
     db.connection().execute("delete from repos.contributor_aliases")
     db.connection().execute("delete from repos.contributors")
+    db.connection().execute("delete from repos.pull_requests")
     db.connection().execute("delete from repos.repositories")
     db.connection().execute("delete from repos.organizations")
 
@@ -193,9 +195,22 @@ def setup_connectors(setup_schema):
                 state='enabled'
             )
         )
+        # session.add(
+        #     integrations_model.Gitlab(
+        #         key=gitlab_connector_key,
+        #         name='test-gitlab-connector',
+        #         personal_access_token='4XPHVF05MxobYF1TRN2fOnUSXhB5+92FUURiF7MoTmg=',
+        #         base_url='https://gitlab.com',
+        #         account_key=test_account_key,
+        #         organization_key=test_organization_key,
+        #         webhook_secret='bxntmOYgcDVP7HHryjZhVPRY7XJ3VOOC4UyRoUIDG4ibs7JDmCxInxB0OMOxVi0a',
+        #         state='enabled'
+        #     )
+        # )
 
     yield dict(
-        github=github_connector_key
+        github=github_connector_key,
+        # gitlab=gitlab_connector_key
     )
 
     db.connection().execute(f"delete from integrations.connectors")
