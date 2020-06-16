@@ -10,33 +10,27 @@
 
 from unittest.mock import patch
 
-from test.shared_fixtures import *
+from ..shared_fixtures import *
 from polaris.vcs import commands
 from polaris.vcs.db import api
 
 
 class TestSyncGitlabPullRequests:
 
-    def it_fetches_new_pull_requests_from_gitlab_created_in_last_1_day(self, setup_sync_repos):
-        # TODO: Create gitlab connector
-        organization_key, connectors = setup_sync_repos
+    def it_fetches_latest_pull_requests_from_gitlab(self, setup_sync_repos_gitlab):
+        organization_key, connectors = setup_sync_repos_gitlab
         repository_key = test_repository_key
-
-        pull_requests = commands.sync_pull_requests(repository_key, connectors['gitlab'], created_after=datetime.utcnow()-timedelta(days=1))
-        assert len(pull_requests) >= 0
-
-    def it_inserts_newly_fetched_pull_requests_into_db(self, setup_org_repo):
-        repository, organization = setup_org_repo
+        source_repo_id = '5419303'
 
         with patch(
-                'polaris.vcs.integrations.github.GitlabRepositoriesConnector.fetch_pull_requests_from_source') as fetch_prs:
+                'polaris.vcs.integrations.gitlab.GitlabRepositoriesConnector.fetch_pull_requests_from_source') as fetch_prs:
             fetch_prs.return_value = [
                 [
                     dict(
-                        repository_id=repository.id,
-                        **pull_request_common_fields
+                        **pull_requests_common_fields
                     )
                 ]
             ]
-            for result in api.import_pull_requests(organization.key, repository.key, fetch_prs.return_value):
-                assert result['success']
+            for command_output in commands.sync_pull_requests(repository_key, connectors['gitlab'], source_repo_id):
+                pull_requests = command_output
+                assert pull_requests[0]['is_new']
