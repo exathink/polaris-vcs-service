@@ -31,7 +31,8 @@ if __name__ == "__main__":
         topic_subscriber_classes=[
             VcsTopicSubscriber,
             AnalyticsTopicSubscriber,
-            ConnectorsTopicSubscriber
+            ConnectorsTopicSubscriber,
+            CommitsTopicSubscriber
 
         ]
     ).start_consuming()

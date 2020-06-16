@@ -10,6 +10,7 @@
 
 import logging
 import requests
+from datetime import datetime, timedelta
 from polaris.integrations.gitlab import GitlabConnector
 from polaris.common.enums import VcsIntegrationTypes
 from polaris.utils.exceptions import ProcessingException
@@ -103,4 +104,49 @@ class GitlabRepositoriesConnector(GitlabConnector):
             yield [
                 self.map_repository_info(repo)
                 for repo in repositories
+            ]
+
+    def map_pull_request_info(self, pull_request):
+        return dict(
+            source_id=pull_request['id'],
+            title=pull_request['title'],
+            description=pull_request['description'],
+            source_state=pull_request['state'],
+            source_created_at=pull_request['created_at'],
+            source_last_updated=pull_request['updated_at'],
+            source_merge_status=pull_request['merge_status'],
+            source_merged_at=pull_request['merged_at'],
+            source_branch=pull_request['source_branch'],
+            target_branch=pull_request['target_branch'],
+            source_repository_source_id=pull_request['source_project_id'],
+            target_repository_source_id=pull_request['target_project_id'],
+            web_url=pull_request['web_url']
+        )
+
+    def fetch_pull_requests(self, source_repo_id):
+        created_after = datetime.utcnow() - timedelta(days=90)
+        fetch_pull_requests_url = f'{self.base_url}/projects/{source_repo_id}/merge_requests'
+        while fetch_pull_requests_url is not None:
+            response = requests.get(
+                fetch_pull_requests_url,
+                # TODO: Finalize the generalized parameters. Discuss.
+                params=dict(created_after=created_after),
+                headers={"Authorization": f"Bearer {self.personal_access_token}"},
+            )
+            if response.ok:
+                yield response.json()
+                if 'next' in response.links:
+                    fetch_pull_requests_url = response.links['next']['url']
+                else:
+                    fetch_pull_requests_url = None
+            else:
+                raise ProcessingException(
+                    f"Server test failed {response.text} status: {response.status_code}\n"
+                )
+
+    def fetch_pull_requests_from_source(self, source_repo_id):
+        for pull_requests in self.fetch_pull_requests(source_repo_id):
+            yield [
+                self.map_pull_request_info(pr)
+                for pr in pull_requests
             ]

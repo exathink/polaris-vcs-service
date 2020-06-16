@@ -11,11 +11,11 @@
 import uuid
 import pytest
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from polaris.common import db
 from polaris.common.enums import VcsIntegrationTypes
 from polaris.repos.db.model import Organization, Repository
-from polaris.repos.db.schema import commits,contributors, contributor_aliases, RepositoryImportState
+from polaris.repos.db.schema import commits, contributors, contributor_aliases, RepositoryImportState
 from polaris.integrations.db import model as integrations_model
 
 test_account_key = uuid.uuid4()
@@ -29,6 +29,7 @@ test_repository_name = 'test-repo'
 test_contributor_name = 'Joe Blow'
 
 github_connector_key = uuid.uuid4()
+gitlab_connector_key = uuid.uuid4()
 
 commit_common_fields = dict(
     commit_date=datetime.utcnow(),
@@ -66,6 +67,24 @@ repositories_common_fields = dict(
     )
 )
 
+pull_requests_common_fields = dict(
+    source_id='61296045',
+    title="PO-178 Graphql API updates.",
+    description="PO-178",
+    source_state= "merged",
+    source_created_at="2020-06-11T18:56:59.410Z",
+    source_last_updated="2020-06-11T18:57:08.777Z",
+    source_merge_status="can_be_merged",
+    source_merged_at="2020-06-11T18:57:08.818Z",
+    source_branch="PO-178",
+    target_branch="master",
+    source_repository_source_id="1000",
+    target_repository_source_id="1000",
+    web_url= "https://gitlab.com/polaris-services/polaris-analytics-service/-/merge_requests/69"
+)
+
+
+
 @pytest.yield_fixture
 def cleanup():
     yield
@@ -75,34 +94,32 @@ def cleanup():
     db.connection().execute("delete from repos.commits")
     db.connection().execute("delete from repos.contributor_aliases")
     db.connection().execute("delete from repos.contributors")
+    db.connection().execute("delete from repos.pull_requests")
     db.connection().execute("delete from repos.repositories")
     db.connection().execute("delete from repos.organizations")
 
 
-
-
 @pytest.yield_fixture()
 def setup_org_repo(setup_schema, cleanup):
-
     with db.orm_session() as session:
-        session.expire_on_commit=False
+        session.expire_on_commit = False
         organization = Organization(
             organization_key=test_organization_key,
             name='test-org',
             public=False
         )
         repository = Repository(
-                connector_key=github_connector_key,
-                organization_key=test_organization_key,
-                key=test_repository_key,
-                name=test_repository_name,
-                source_id=test_repository_source_id,
-                import_state=0,
-                description='A neat new repo',
-                integration_type=VcsIntegrationTypes.github.value,
-                url='https://foo.bar.com'
+            connector_key=github_connector_key,
+            organization_key=test_organization_key,
+            key=test_repository_key,
+            name=test_repository_name,
+            source_id=test_repository_source_id,
+            import_state=0,
+            description='A neat new repo',
+            integration_type=VcsIntegrationTypes.github.value,
+            url='https://foo.bar.com'
 
-            )
+        )
         organization.repositories.append(
             repository
         )
@@ -112,10 +129,34 @@ def setup_org_repo(setup_schema, cleanup):
     yield repository, organization
 
 
+@pytest.yield_fixture()
+def setup_org_repo_gitlab(setup_schema, cleanup):
+    with db.orm_session() as session:
+        session.expire_on_commit = False
+        organization = Organization(
+            organization_key=test_organization_key,
+            name='test-org',
+            public=False
+        )
+        repository = Repository(
+            connector_key=gitlab_connector_key,
+            organization_key=test_organization_key,
+            key=test_repository_key,
+            name=test_repository_name,
+            source_id=test_repository_source_id,
+            import_state=0,
+            description='A neat new repo',
+            integration_type=VcsIntegrationTypes.github.value,
+            url='https://foo.bar.com'
 
+        )
+        organization.repositories.append(
+            repository
+        )
+        session.add(organization)
+        session.flush()
 
-
-
+    yield repository, organization
 
 @pytest.yield_fixture()
 def setup_commits(setup_org_repo):
@@ -149,9 +190,9 @@ def setup_commits(setup_org_repo):
                 repository_id=repository.id,
                 key=uuid.uuid4().hex,
                 source_commit_id='XXXX',
-                commit_message = 'A Change. Fixes issue #1000',
-                committer_alias_id = contributor_alias_id,
-                author_alias_id = contributor_alias_id,
+                commit_message='A Change. Fixes issue #1000',
+                committer_alias_id=contributor_alias_id,
+                author_alias_id=contributor_alias_id,
                 **commit_common_fields
             ),
             dict(
@@ -163,7 +204,7 @@ def setup_commits(setup_org_repo):
                 author_alias_id=contributor_alias_id,
                 **commit_common_fields
             )
-                ]
+        ]
         session.connection.execute(
             commits.insert(inserted_commits)
         )
@@ -171,14 +212,8 @@ def setup_commits(setup_org_repo):
     yield inserted_commits
 
 
-
-
-
-
 @pytest.yield_fixture
 def setup_connectors(setup_schema):
-
-
     with db.orm_session() as session:
         session.expire_on_commit = False
         session.add(
@@ -193,15 +228,25 @@ def setup_connectors(setup_schema):
                 state='enabled'
             )
         )
-
+        session.add(
+            integrations_model.Gitlab(
+                key=gitlab_connector_key,
+                name='test-gitlab-connector',
+                personal_access_token='XXXXXX',
+                base_url='https://gitlab.com',
+                account_key=test_account_key,
+                organization_key=test_organization_key,
+                webhook_secret='YYYYYY',
+                state='enabled'
+            )
+        )
 
     yield dict(
-        github=github_connector_key
+        github=github_connector_key,
+        gitlab=gitlab_connector_key
     )
 
     db.connection().execute(f"delete from integrations.connectors")
-
-
 
 
 @pytest.yield_fixture
@@ -211,6 +256,13 @@ def setup_sync_repos(setup_org_repo, setup_connectors):
 
     yield organization.organization_key, connectors
 
+
+@pytest.yield_fixture
+def setup_sync_repos_gitlab(setup_org_repo_gitlab, setup_connectors):
+    repository, organization = setup_org_repo_gitlab
+    connectors = setup_connectors
+
+    yield organization.organization_key, connectors
 
 
 @pytest.yield_fixture

@@ -12,7 +12,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from polaris.common import db
 
-from .impl import commits, repositories
+from .impl import commits, repositories, pull_requests
 
 
 # Repositories
@@ -34,6 +34,16 @@ def import_repositories(organization_key, repository_keys):
         return db.process_exception("Import Repositories", exc)
     except Exception as e:
         return db.failure_message('Import Repositories', e)
+
+
+def sync_pull_requests(organization_key, repository_key, source_pull_requests):
+    try:
+        with db.orm_session() as session:
+            return pull_requests.sync_pull_requests(session, organization_key, repository_key, source_pull_requests)
+    except SQLAlchemyError as exc:
+        return db.process_exception("Import Pull Requests", exc)
+    except Exception as e:
+        return db.failure_message('Import Pull Requests', e)
 
 
 def register_webhook(organization_key, repository_key, webhook_info):

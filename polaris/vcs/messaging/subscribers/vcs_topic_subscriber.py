@@ -11,11 +11,13 @@
 import logging
 
 from polaris.messaging.topics import TopicSubscriber, VcsTopic
-from polaris.vcs.messaging.messages import AtlassianConnectRepositoryEvent, GitlabRepositoryEvent, RemoteRepositoryPushEvent
+from polaris.vcs.messaging.messages import AtlassianConnectRepositoryEvent, GitlabRepositoryEvent, \
+    RemoteRepositoryPushEvent
 from polaris.messaging.utils import raise_message_processing_error
 from polaris.vcs import commands
 from polaris.vcs.integrations.atlassian import bitbucket_message_handler
 from polaris.vcs.integrations.gitlab import gitlab_message_handler
+
 logger = logging.getLogger('polaris.vcs.messaging.vcs_topic_subscriber')
 
 
@@ -27,7 +29,7 @@ class VcsTopicSubscriber(TopicSubscriber):
             message_classes=[
                 AtlassianConnectRepositoryEvent,
                 GitlabRepositoryEvent,
-                RemoteRepositoryPushEvent,
+                RemoteRepositoryPushEvent
             ],
             publisher=publisher,
             exclusive=False
@@ -40,7 +42,6 @@ class VcsTopicSubscriber(TopicSubscriber):
             return self.process_gitlab_repository_event(message)
         elif RemoteRepositoryPushEvent.message_type == message.message_type:
             return self.process_remote_repository_push_event(message)
-
 
     @staticmethod
     def process_atlassian_connect_repository_event(message):
@@ -66,7 +67,6 @@ class VcsTopicSubscriber(TopicSubscriber):
         connector_key = message['connector_key']
         event_type = message['event_type']
         payload = message['payload']
-
 
         logger.info(
             f"Processing  gitlab event {message.message_type}: "
