@@ -123,14 +123,15 @@ class GitlabRepositoriesConnector(GitlabConnector):
             web_url=pull_request['web_url']
         )
 
-    def fetch_pull_requests(self, source_repo_id):
-        created_after = datetime.utcnow() - timedelta(days=90)
+    def fetch_pull_requests(self, source_repo_id, updated_after):
+        if updated_after is None:
+            updated_after = datetime.utcnow() - timedelta(days=90)
         fetch_pull_requests_url = f'{self.base_url}/projects/{source_repo_id}/merge_requests'
         while fetch_pull_requests_url is not None:
             response = requests.get(
                 fetch_pull_requests_url,
                 # TODO: Finalize the generalized parameters. Discuss.
-                params=dict(created_after=created_after),
+                params=dict(updated_after=updated_after),
                 headers={"Authorization": f"Bearer {self.personal_access_token}"},
             )
             if response.ok:
@@ -144,8 +145,8 @@ class GitlabRepositoriesConnector(GitlabConnector):
                     f"Server test failed {response.text} status: {response.status_code}\n"
                 )
 
-    def fetch_pull_requests_from_source(self, source_repo_id):
-        for pull_requests in self.fetch_pull_requests(source_repo_id):
+    def fetch_pull_requests_from_source(self, source_repo_id, updated_after):
+        for pull_requests in self.fetch_pull_requests(source_repo_id, updated_after):
             yield [
                 self.map_pull_request_info(pr)
                 for pr in pull_requests

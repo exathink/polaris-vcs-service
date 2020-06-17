@@ -12,7 +12,6 @@ from unittest.mock import patch
 
 from ..shared_fixtures import *
 from polaris.vcs import commands
-from polaris.vcs.db import api
 
 
 class TestSyncGitlabPullRequests:
