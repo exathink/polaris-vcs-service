@@ -1,1 +1,2 @@
 from .gitlab_connector import GitlabRepositoriesConnector
+from .gitlab_connector import PolarisGitlabRepository

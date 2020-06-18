@@ -21,8 +21,8 @@ from sqlalchemy.dialects.postgresql import insert
 log = logging.getLogger('polaris.vcs.db.impl.pull_requests')
 
 
-def sync_pull_requests(session, organization_key, repository_key, source_pull_requests):
-    if organization_key and repository_key:
+def sync_pull_requests(session, repository_key, source_pull_requests):
+    if repository_key:
         repository = Repository.find_by_repository_key(session, repository_key)
         repository_id = repository.id
         # create a temp table for pull requests and insert source_pull_requests

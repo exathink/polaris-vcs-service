@@ -36,10 +36,10 @@ def import_repositories(organization_key, repository_keys):
         return db.failure_message('Import Repositories', e)
 
 
-def sync_pull_requests(organization_key, repository_key, source_pull_requests):
+def sync_pull_requests(repository_key, source_pull_requests):
     try:
         with db.orm_session() as session:
-            return pull_requests.sync_pull_requests(session, organization_key, repository_key, source_pull_requests)
+            return pull_requests.sync_pull_requests(session, repository_key, source_pull_requests)
     except SQLAlchemyError as exc:
         return db.process_exception("Import Pull Requests", exc)
     except Exception as e:
