@@ -146,7 +146,7 @@ def setup_org_repo_gitlab(setup_schema, cleanup):
             source_id=test_repository_source_id,
             import_state=0,
             description='A neat new repo',
-            integration_type=VcsIntegrationTypes.github.value,
+            integration_type=VcsIntegrationTypes.gitlab.value,
             url='https://foo.bar.com'
 
         )

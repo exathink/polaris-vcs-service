@@ -174,6 +174,7 @@ def sync_pull_requests(session, repository_key, source_pull_requests):
                 source_repository_id=pr.source_repository_id,
                 target_repository_id=pr.target_repository_id,
                 source_id=pr.source_id
-            )
+            ) if pr.source_id is not None else None
             for pr in pull_requests_before_insert
         ]
+

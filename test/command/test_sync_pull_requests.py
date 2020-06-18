@@ -22,7 +22,7 @@ class TestSyncGitlabPullRequests:
         source_repo_id = '5419303'
 
         with patch(
-                'polaris.vcs.integrations.gitlab.GitlabRepositoriesConnector.fetch_pull_requests_from_source') as fetch_prs:
+                'polaris.vcs.integrations.gitlab.GitlabRepository.fetch_pull_requests_from_source') as fetch_prs:
             fetch_prs.return_value = [
                 [
                     dict(
@@ -30,8 +30,7 @@ class TestSyncGitlabPullRequests:
                     )
                 ]
             ]
-            updated_after = None
-            for command_output in commands.sync_pull_requests(repository_key, connectors['gitlab'], source_repo_id, updated_after=updated_after):
+            for command_output in commands.sync_pull_requests(repository_key):
                 pull_requests = command_output
                 assert pull_requests[0]['is_new']
         updated_pull_request = dict(
@@ -39,7 +38,7 @@ class TestSyncGitlabPullRequests:
         )
         updated_pull_request['source_last_updated'] = datetime.utcnow()
         with patch(
-                'polaris.vcs.integrations.gitlab.GitlabRepositoriesConnector.fetch_pull_requests_from_source') as fetch_prs:
+                'polaris.vcs.integrations.gitlab.GitlabRepository.fetch_pull_requests_from_source') as fetch_prs:
             fetch_prs.return_value = [
                 [
                     dict(
@@ -47,7 +46,6 @@ class TestSyncGitlabPullRequests:
                     )
                 ]
             ]
-            updated_after = datetime.utcnow()
-            for command_output in commands.sync_pull_requests(repository_key, connectors['gitlab'], source_repo_id, updated_after=updated_after):
+            for command_output in commands.sync_pull_requests(repository_key):
                 pull_requests = command_output
                 assert not pull_requests[0]['is_new']
