@@ -17,7 +17,6 @@ from polaris.common import db
 from sqlalchemy import select, and_, Column, String, Integer
 from sqlalchemy.dialects.postgresql import insert
 
-
 log = logging.getLogger('polaris.vcs.db.impl.pull_requests')
 
 
@@ -119,7 +118,7 @@ def sync_pull_requests(session, repository_key, source_pull_requests):
         # Update pull_requests
         upsert = insert(pull_requests).from_select(
             [column.name for column in pull_requests_temp.columns],
-            select([pull_requests_temp])
+            select([pull_requests_temp]).where(pull_requests_temp.c.key != None)
         )
 
         session.connection().execute(
@@ -177,4 +176,3 @@ def sync_pull_requests(session, repository_key, source_pull_requests):
             ) if pr.source_id is not None else None
             for pr in pull_requests_before_insert
         ]
-

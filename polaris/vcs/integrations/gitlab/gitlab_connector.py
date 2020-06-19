@@ -17,8 +17,8 @@ from polaris.utils.config import get_config_provider
 from .gitlab_webhooks import webhook_paths
 from polaris.common.enums import VcsIntegrationTypes
 from polaris.vcs import connector_factory
-config_provider = get_config_provider()
 
+config_provider = get_config_provider()
 
 logger = logging.getLogger('polaris.vcs.integrations.github')
 
@@ -50,7 +50,7 @@ class GitlabRepositoriesConnector(GitlabConnector):
     def register_repository_push_hook(self, repository):
         repo_source_id = repository['source_id']
         repository_push_callback_url = f"{config_provider.get('GITLAB_WEBHOOKS_BASE_URL')}" \
-                                        f"{webhook_paths['repository:push']}/{self.key}"
+                                       f"{webhook_paths['repository:push']}/{self.key}"
 
         add_hook_url = f"{self.base_url}/projects/{repo_source_id}/hooks"
 

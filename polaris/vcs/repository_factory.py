@@ -31,9 +31,3 @@ def get_provider_impl(repository_key, join_this=None):
             raise ProcessingException(
                 f'Could not find repository with key {repository_key}'
             )
-
-
-
-
-
-

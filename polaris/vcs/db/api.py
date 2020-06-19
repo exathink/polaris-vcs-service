@@ -66,6 +66,7 @@ def handle_remote_repository_push(connector_key, repository_source_id):
     except Exception as e:
         return db.failure_message('Handle repository push', e)
 
+
 # Commits
 def ack_commits_created(commit_keys):
     try:
