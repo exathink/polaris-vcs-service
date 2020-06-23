@@ -135,34 +135,40 @@ def sync_pull_requests(session, repository_key, source_pull_requests):
                     source_repository_source_id=upsert.excluded.source_repository_source_id,
                     target_repository_source_id=upsert.excluded.target_repository_source_id,
                     source_repository_id=upsert.excluded.source_repository_id,
+                    deleted_at=upsert.excluded.deleted_at,
                 )
             )
         )
 
-        return [
-            dict(
-                is_new=pr.current_key is None,
-                key=pr.key if pr.current_key is None else pr.current_key,
-                title=pr.title,
-                description=pr.description,
-                web_url=pr.web_url,
-                source_created_at=pr.source_created_at,
-                source_last_updated=pr.source_last_updated,
-                last_updated=pr.last_updated,
-                source_state=pr.source_state,
-                source_merge_status=pr.source_merge_status,
-                source_merged_at=pr.source_merged_at,
-                source_branch=pr.source_branch,
-                source_branch_id=pr.source_branch_id,
-                source_branch_latest_commit=pr.source_branch_latest_commit,
-                source_branch_latest_seq_no=pr.source_branch_latest_seq_no,
-                target_branch=pr.target_branch,
-                target_branch_id=pr.target_branch_id,
-                source_repository_source_id=pr.source_repository_source_id,
-                target_repository_source_id=pr.target_repository_source_id,
-                source_repository_id=pr.source_repository_id,
-                source_id=pr.source_id,
-                source_display_id=pr.source_display_id,
-            ) if pr.source_id is not None else None
-            for pr in pull_requests_before_insert
-        ]
+        synced_pull_requests = []
+        for pr in pull_requests_before_insert:
+            if pr is not None:
+                synced_pull_requests.append(
+                    dict(
+                        is_new=pr.current_key is None,
+                        key=pr.key if pr.current_key is None else pr.current_key,
+                        title=pr.title,
+                        description=pr.description,
+                        web_url=pr.web_url,
+                        source_created_at=pr.source_created_at,
+                        source_last_updated=pr.source_last_updated,
+                        last_updated=pr.last_updated,
+                        source_state=pr.source_state,
+                        source_merge_status=pr.source_merge_status,
+                        source_merged_at=pr.source_merged_at,
+                        source_branch=pr.source_branch,
+                        source_branch_id=pr.source_branch_id,
+                        source_branch_latest_commit=pr.source_branch_latest_commit,
+                        source_branch_latest_seq_no=pr.source_branch_latest_seq_no,
+                        target_branch=pr.target_branch,
+                        target_branch_id=pr.target_branch_id,
+                        source_repository_source_id=pr.source_repository_source_id,
+                        target_repository_source_id=pr.target_repository_source_id,
+                        source_repository_id=pr.source_repository_id,
+                        source_id=pr.source_id,
+                        source_display_id=pr.source_display_id,
+                        deleted_at=pr.deleted_at,
+                        repository_id=pr.source_repository_id,
+                    )
+                )
+        return synced_pull_requests
