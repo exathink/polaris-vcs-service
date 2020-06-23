@@ -14,8 +14,6 @@ from polaris.messaging.topics import TopicSubscriber, CommitsTopic
 from polaris.messaging.utils import raise_message_processing_error
 from polaris.messaging.messages import CommitHistoryImported
 from polaris.vcs import commands
-from polaris.repos.db.model import Repository
-from polaris.common import db
 
 logger = logging.getLogger('polaris.vcs.messaging.commits_topic_subscriber')
 
@@ -45,10 +43,6 @@ class CommitsTopicSubscriber(TopicSubscriber):
         repository_key = message['repository_key']
         logger.info(f"Processing commit history imported")
         try:
-            with db.orm_session() as session:
-                repository = Repository.find_by_repository_key(session, repository_key)
-                connector_key = repository.connector_key
-                source_repo_id = repository.source_id
-            yield commands.sync_pull_requests(repository_key=repository_key, connector_key=connector_key, source_repo_id=source_repo_id)
+            yield commands.sync_pull_requests(repository_key=repository_key)
         except Exception as exc:
             raise_message_processing_error(message, 'Failed to process commit history imported', str(exc))

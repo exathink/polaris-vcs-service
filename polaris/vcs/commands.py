@@ -11,7 +11,7 @@
 import logging
 from polaris.common import db
 import polaris.vcs.db.impl.repositories
-from polaris.vcs import connector_factory
+from polaris.vcs import connector_factory, repository_factory
 from polaris.integrations.db.api import tracking_receipt_updates
 from polaris.vcs.db import api
 from polaris.vcs.messaging import publish
@@ -37,15 +37,13 @@ def sync_repositories(connector_key, tracking_receipt_key=None):
                 )
 
 
-def sync_pull_requests(repository_key, connector_key, source_repo_id):
+def sync_pull_requests(repository_key):
     log.info(f'Sync pull requests starting')
-    connector = connector_factory.get_connector(connector_key=connector_key)
-    if connector:
-        yield polaris.vcs.db.api.sync_pull_requests(
-            connector.organization_key,
-            repository_key,
-            connector.fetch_pull_requests_from_source(source_repo_id)
-        )
+    repository_provider = repository_factory.get_provider_impl(repository_key)
+    yield polaris.vcs.db.api.sync_pull_requests(
+        repository_key,
+        repository_provider.fetch_pull_requests_from_source()
+    )
 
 
 def register_repository_push_webhooks(organization_key, connector_key, repository_summaries):

@@ -17,12 +17,11 @@ from polaris.common import db
 from sqlalchemy import select, and_, Column, String, Integer
 from sqlalchemy.dialects.postgresql import insert
 
-
 log = logging.getLogger('polaris.vcs.db.impl.pull_requests')
 
 
-def sync_pull_requests(session, organization_key, repository_key, source_pull_requests):
-    if organization_key and repository_key:
+def sync_pull_requests(session, repository_key, source_pull_requests):
+    if repository_key:
         repository = Repository.find_by_repository_key(session, repository_key)
         repository_id = repository.id
         # create a temp table for pull requests and insert source_pull_requests
@@ -119,7 +118,7 @@ def sync_pull_requests(session, organization_key, repository_key, source_pull_re
         # Update pull_requests
         upsert = insert(pull_requests).from_select(
             [column.name for column in pull_requests_temp.columns],
-            select([pull_requests_temp])
+            select([pull_requests_temp]).where(pull_requests_temp.c.key != None)
         )
 
         session.connection().execute(
@@ -174,6 +173,6 @@ def sync_pull_requests(session, organization_key, repository_key, source_pull_re
                 source_repository_id=pr.source_repository_id,
                 target_repository_id=pr.target_repository_id,
                 source_id=pr.source_id
-            )
+            ) if pr.source_id is not None else None
             for pr in pull_requests_before_insert
         ]

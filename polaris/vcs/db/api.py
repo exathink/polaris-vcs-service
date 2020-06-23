@@ -36,10 +36,10 @@ def import_repositories(organization_key, repository_keys):
         return db.failure_message('Import Repositories', e)
 
 
-def sync_pull_requests(organization_key, repository_key, source_pull_requests):
+def sync_pull_requests(repository_key, source_pull_requests):
     try:
         with db.orm_session() as session:
-            return pull_requests.sync_pull_requests(session, organization_key, repository_key, source_pull_requests)
+            return pull_requests.sync_pull_requests(session, repository_key, source_pull_requests)
     except SQLAlchemyError as exc:
         return db.process_exception("Import Pull Requests", exc)
     except Exception as e:
@@ -65,6 +65,7 @@ def handle_remote_repository_push(connector_key, repository_source_id):
         return db.process_exception("Handle repository push", exc)
     except Exception as e:
         return db.failure_message('Handle repository push', e)
+
 
 # Commits
 def ack_commits_created(commit_keys):

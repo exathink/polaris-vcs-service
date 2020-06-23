@@ -12,12 +12,13 @@ import logging
 import requests
 from datetime import datetime, timedelta
 from polaris.integrations.gitlab import GitlabConnector
-from polaris.common.enums import VcsIntegrationTypes
 from polaris.utils.exceptions import ProcessingException
 from polaris.utils.config import get_config_provider
 from .gitlab_webhooks import webhook_paths
-config_provider = get_config_provider()
+from polaris.common.enums import VcsIntegrationTypes
+from polaris.vcs import connector_factory
 
+config_provider = get_config_provider()
 
 logger = logging.getLogger('polaris.vcs.integrations.github')
 
@@ -49,7 +50,7 @@ class GitlabRepositoriesConnector(GitlabConnector):
     def register_repository_push_hook(self, repository):
         repo_source_id = repository['source_id']
         repository_push_callback_url = f"{config_provider.get('GITLAB_WEBHOOKS_BASE_URL')}" \
-                                        f"{webhook_paths['repository:push']}/{self.key}"
+                                       f"{webhook_paths['repository:push']}/{self.key}"
 
         add_hook_url = f"{self.base_url}/projects/{repo_source_id}/hooks"
 
@@ -106,6 +107,30 @@ class GitlabRepositoriesConnector(GitlabConnector):
                 for repo in repositories
             ]
 
+
+class PolarisGitlabRepository:
+
+    @staticmethod
+    def create(repository):
+        if repository.integration_type == VcsIntegrationTypes.gitlab.value:
+            return GitlabRepository(repository)
+        else:
+            raise ProcessingException(f"Unknown integration_type: {repository.integration_type}")
+
+
+class GitlabRepository(PolarisGitlabRepository):
+
+    def __init__(self, repository):
+        self.repository = repository
+        self.source_repo_id = repository.source_id
+        self.last_updated = repository.latest_pull_request_update_timestamp
+        self.gitlab_connector = connector_factory.get_connector(
+            connector_key=self.repository.connector_key
+        )
+        self.webhook_secret = self.gitlab_connector.webhook_secret
+        self.base_url = f'{self.gitlab_connector.base_url}'
+        self.personal_access_token = self.gitlab_connector.personal_access_token
+
     def map_pull_request_info(self, pull_request):
         return dict(
             source_id=pull_request['id'],
@@ -123,14 +148,17 @@ class GitlabRepositoriesConnector(GitlabConnector):
             web_url=pull_request['web_url']
         )
 
-    def fetch_pull_requests(self, source_repo_id):
-        created_after = datetime.utcnow() - timedelta(days=90)
-        fetch_pull_requests_url = f'{self.base_url}/projects/{source_repo_id}/merge_requests'
+    def fetch_pull_requests(self):
+        query_params = dict(limit=100)
+        if self.last_updated is None:
+            query_params['updated_after'] = (datetime.utcnow() - timedelta(days=93)).isoformat()
+        else:
+            query_params['updated_after'] = self.last_updated.isoformat()
+        fetch_pull_requests_url = f'{self.base_url}/projects/{self.source_repo_id}/merge_requests'
         while fetch_pull_requests_url is not None:
             response = requests.get(
                 fetch_pull_requests_url,
-                # TODO: Finalize the generalized parameters. Discuss.
-                params=dict(created_after=created_after),
+                params=query_params,
                 headers={"Authorization": f"Bearer {self.personal_access_token}"},
             )
             if response.ok:
@@ -144,8 +172,8 @@ class GitlabRepositoriesConnector(GitlabConnector):
                     f"Server test failed {response.text} status: {response.status_code}\n"
                 )
 
-    def fetch_pull_requests_from_source(self, source_repo_id):
-        for pull_requests in self.fetch_pull_requests(source_repo_id):
+    def fetch_pull_requests_from_source(self):
+        for pull_requests in self.fetch_pull_requests():
             yield [
                 self.map_pull_request_info(pr)
                 for pr in pull_requests

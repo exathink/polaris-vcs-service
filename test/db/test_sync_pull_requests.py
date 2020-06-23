@@ -16,8 +16,8 @@ from polaris.vcs.db import api
 
 class TestSyncGitlabPullRequests:
 
-    def it_inserts_newly_fetched_pull_requests_into_db(self, setup_org_repo):
-        repository, organization = setup_org_repo
+    def it_inserts_newly_fetched_pull_requests_into_db(self, setup_org_repo_gitlab):
+        repository, organization = setup_org_repo_gitlab
         pull_requests = [
             {
                 "source_id": 61296045,
@@ -36,14 +36,14 @@ class TestSyncGitlabPullRequests:
             },
         ]
 
-        result = api.sync_pull_requests(test_organization_key, test_repository_key, iter([pull_requests]))
+        result = api.sync_pull_requests(test_repository_key, iter([pull_requests]))
         assert result[0]['is_new']
         assert result[0]['title'] == pull_requests[0]['title']
         assert db.connection().execute("select count(*) from repos.pull_requests where source_id='61296045'").scalar() == 1
 
 
-    def it_updates_pull_request_existing_in_db(self, setup_org_repo):
-        repository, organization = setup_org_repo
+    def it_updates_pull_request_existing_in_db(self, setup_org_repo_gitlab):
+        repository, organization = setup_org_repo_gitlab
         pull_requests = [
             {
                 "source_id": 61296045,
@@ -63,7 +63,7 @@ class TestSyncGitlabPullRequests:
         ]
 
 
-        result = api.sync_pull_requests(test_organization_key, test_repository_key, iter([pull_requests]))
+        result = api.sync_pull_requests(test_repository_key, iter([pull_requests]))
         assert result[0]['is_new']
         assert result[0]['title'] == pull_requests[0]['title']
         assert result[0]['source_state'] == 'opened'
@@ -88,7 +88,7 @@ class TestSyncGitlabPullRequests:
             },
         ]
 
-        result = api.sync_pull_requests(test_organization_key, test_repository_key, iter([pull_requests]))
+        result = api.sync_pull_requests(test_repository_key, iter([pull_requests]))
         assert not result[0]['is_new']
         assert result[0]['title'] == pull_requests[0]['title']
         assert result[0]['source_state'] == 'merged'

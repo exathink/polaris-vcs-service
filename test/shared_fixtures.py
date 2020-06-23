@@ -71,7 +71,7 @@ pull_requests_common_fields = dict(
     source_id='61296045',
     title="PO-178 Graphql API updates.",
     description="PO-178",
-    source_state= "merged",
+    source_state="merged",
     source_created_at="2020-06-11T18:56:59.410Z",
     source_last_updated="2020-06-11T18:57:08.777Z",
     source_merge_status="can_be_merged",
@@ -80,9 +80,8 @@ pull_requests_common_fields = dict(
     target_branch="master",
     source_repository_source_id="1000",
     target_repository_source_id="1000",
-    web_url= "https://gitlab.com/polaris-services/polaris-analytics-service/-/merge_requests/69"
+    web_url="https://gitlab.com/polaris-services/polaris-analytics-service/-/merge_requests/69"
 )
-
 
 
 @pytest.yield_fixture
@@ -146,7 +145,7 @@ def setup_org_repo_gitlab(setup_schema, cleanup):
             source_id=test_repository_source_id,
             import_state=0,
             description='A neat new repo',
-            integration_type=VcsIntegrationTypes.github.value,
+            integration_type=VcsIntegrationTypes.gitlab.value,
             url='https://foo.bar.com'
 
         )
@@ -157,6 +156,7 @@ def setup_org_repo_gitlab(setup_schema, cleanup):
         session.flush()
 
     yield repository, organization
+
 
 @pytest.yield_fixture()
 def setup_commits(setup_org_repo):
