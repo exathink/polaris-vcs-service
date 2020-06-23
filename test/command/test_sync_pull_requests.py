@@ -127,6 +127,7 @@ class TestSyncGitlabPullRequests:
         }
         expected_mapped_pr = {
             'source_id': 61296045,
+            "source_display_id": 69,
             'title': 'PO-178 Graphql API updates.',
             'description': 'PO-178',
             'source_state': 'merged',

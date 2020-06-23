@@ -31,13 +31,11 @@ def sync_pull_requests(session, repository_key, source_pull_requests):
             exclude_columns=[
                 pull_requests.c.id,
                 pull_requests.c.source_repository_id,
-                pull_requests.c.target_repository_id,
                 pull_requests.c.source_branch_latest_commit,
                 pull_requests.c.source_branch_latest_seq_no
             ],
             extra_columns=[
                 Column('source_repository_id', Integer, nullable=True),
-                Column('target_repository_id', Integer, nullable=True),
                 Column('source_branch_latest_commit', String, nullable=True),
                 Column('source_branch_latest_seq_no', Integer, nullable=True)
             ]
@@ -67,14 +65,6 @@ def sync_pull_requests(session, repository_key, source_pull_requests):
             )
         )
 
-        session.connection().execute(
-            pull_requests_temp.update().where(
-                repositories.c.source_id == pull_requests_temp.c.target_repository_source_id,
-            ).values(
-                target_repository_id=repositories.c.id,
-            )
-        )
-
         # Resolving branches information
         # FIXME: Adding the latest commit and seq no from branches to fill in non-nullable fields \
         #  Will need to do more when handling commits properly
@@ -96,7 +86,7 @@ def sync_pull_requests(session, repository_key, source_pull_requests):
             pull_requests_temp.update().where(
                 and_(
                     branches.c.name == pull_requests_temp.c.target_branch,
-                    branches.c.repository_id == pull_requests_temp.c.target_repository_id
+                    branches.c.repository_id == pull_requests_temp.c.repository_id
                 )
             ).values(
                 target_branch_id=branches.c.id
@@ -126,6 +116,7 @@ def sync_pull_requests(session, repository_key, source_pull_requests):
                 index_elements=['repository_id', 'source_id'],
                 set_=dict(
                     key=upsert.excluded.key,
+                    source_display_id=upsert.excluded.source_display_id,
                     title=upsert.excluded.title,
                     description=upsert.excluded.description,
                     web_url=upsert.excluded.web_url,
@@ -144,7 +135,6 @@ def sync_pull_requests(session, repository_key, source_pull_requests):
                     source_repository_source_id=upsert.excluded.source_repository_source_id,
                     target_repository_source_id=upsert.excluded.target_repository_source_id,
                     source_repository_id=upsert.excluded.source_repository_id,
-                    target_repository_id=upsert.excluded.target_repository_id
                 )
             )
         )
@@ -171,8 +161,8 @@ def sync_pull_requests(session, repository_key, source_pull_requests):
                 source_repository_source_id=pr.source_repository_source_id,
                 target_repository_source_id=pr.target_repository_source_id,
                 source_repository_id=pr.source_repository_id,
-                target_repository_id=pr.target_repository_id,
-                source_id=pr.source_id
+                source_id=pr.source_id,
+                source_display_id=pr.source_display_id,
             ) if pr.source_id is not None else None
             for pr in pull_requests_before_insert
         ]

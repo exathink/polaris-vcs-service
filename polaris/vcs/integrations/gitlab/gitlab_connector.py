@@ -134,6 +134,7 @@ class GitlabRepository(PolarisGitlabRepository):
     def map_pull_request_info(self, pull_request):
         return dict(
             source_id=pull_request['id'],
+            source_display_id=pull_request['iid'],
             title=pull_request['title'],
             description=pull_request['description'],
             source_state=pull_request['state'],
