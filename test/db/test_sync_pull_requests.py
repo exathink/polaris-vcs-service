@@ -38,8 +38,10 @@ class TestSyncGitlabPullRequests:
         ]
 
         result = api.sync_pull_requests(test_repository_key, iter([pull_requests]))
-        assert result[0]['is_new']
-        assert result[0]['title'] == pull_requests[0]['title']
+        assert result['success']
+        prs = result['pull_requests']
+        assert prs[0]['is_new']
+        assert prs[0]['title'] == pull_requests[0]['title']
         assert db.connection().execute("select count(*) from repos.pull_requests where source_id='61296045'").scalar() == 1
 
 
@@ -66,9 +68,11 @@ class TestSyncGitlabPullRequests:
 
 
         result = api.sync_pull_requests(test_repository_key, iter([pull_requests]))
-        assert result[0]['is_new']
-        assert result[0]['title'] == pull_requests[0]['title']
-        assert result[0]['source_state'] == 'opened'
+        assert result['success']
+        prs = result['pull_requests']
+        assert prs[0]['is_new']
+        assert prs[0]['title'] == pull_requests[0]['title']
+        assert prs[0]['source_state'] == 'opened'
         assert db.connection().execute(
             "select count(*) from repos.pull_requests where source_id='61296045' and source_state='opened'").scalar() == 1
 
@@ -92,8 +96,10 @@ class TestSyncGitlabPullRequests:
         ]
 
         result = api.sync_pull_requests(test_repository_key, iter([pull_requests]))
-        assert not result[0]['is_new']
-        assert result[0]['title'] == pull_requests[0]['title']
-        assert result[0]['source_state'] == 'merged'
+        assert result['success']
+        prs = result['pull_requests']
+        assert not prs[0]['is_new']
+        assert prs[0]['title'] == pull_requests[0]['title']
+        assert prs[0]['source_state'] == 'merged'
         assert db.connection().execute(
             "select count(*) from repos.pull_requests where source_id='61296045' and source_state='merged'").scalar() == 1

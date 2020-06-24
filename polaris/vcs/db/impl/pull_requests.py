@@ -142,7 +142,7 @@ def sync_pull_requests(session, repository_key, source_pull_requests):
 
         synced_pull_requests = []
         for pr in pull_requests_before_insert:
-            if pr is not None:
+            if pr.source_id is not None:
                 synced_pull_requests.append(
                     dict(
                         is_new=pr.current_key is None,
@@ -171,4 +171,7 @@ def sync_pull_requests(session, repository_key, source_pull_requests):
                         repository_id=pr.source_repository_id,
                     )
                 )
-        return synced_pull_requests
+        return dict(
+            success=True,
+            pull_requests=synced_pull_requests
+        )

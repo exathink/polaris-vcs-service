@@ -68,9 +68,9 @@ class TestCommitHistoryImported:
                 ]
             ]
 
-            updated_pull_requests = CommitsTopicSubscriber(channel, publisher).dispatch(channel, message)
-            assert len(updated_pull_requests) == 1
-            assert updated_pull_requests[0]['is_new']
+            created_messages, updated_messages = CommitsTopicSubscriber(channel, publisher).dispatch(channel, message)
+            assert len(created_messages) == 1
+            assert len(updated_messages) == 0
 
     def it_fetches_pull_requests_updated_after_latest_source_last_updated(self, setup_sync_repos_gitlab):
         organization_key, repository_key = setup_sync_repos_gitlab
@@ -122,14 +122,14 @@ class TestCommitHistoryImported:
                 ]
             ]
 
-            updated_pull_requests = CommitsTopicSubscriber(channel, publisher).dispatch(channel, message)
-            assert len(updated_pull_requests) == 1
-            assert updated_pull_requests[0]['is_new']
+            created_messages, updated_messages = CommitsTopicSubscriber(channel, publisher).dispatch(channel, message)
+            assert len(created_messages) == 1
+            assert len(updated_messages) == 0
         with patch(
                 'polaris.vcs.integrations.gitlab.GitlabRepository.fetch_pull_requests_from_source') as fetch_prs:
             fetch_prs.return_value = [
                 []
             ]
-            updated_pull_requests = CommitsTopicSubscriber(channel, publisher).dispatch(channel, message)
-            assert len(updated_pull_requests) == 1
-            assert updated_pull_requests[0] is None
+            created_messages, updated_messages = CommitsTopicSubscriber(channel, publisher).dispatch(channel, message)
+            assert len(created_messages) == 0
+            assert len(updated_messages) == 0
