@@ -78,14 +78,11 @@ class CommitsTopicSubscriber(TopicSubscriber):
                             merge_status=pr['source_merge_status'],
                             merged_at=pr['source_merged_at'],
                             source_branch=pr['source_branch'],
-                            source_branch_id=pr['source_branch_id'],
                             source_branch_latest_commit=pr['source_branch_latest_commit'],
                             target_branch=pr['target_branch'],
-                            target_branch_id=pr['target_branch_id'],
-                            source_repository_id=pr['source_repository_id'],
+                            source_repository_key=pr['source_repository_key'],
                             source_id=pr['source_id'],
                             display_id=pr['source_display_id'],
-                            repository_id=pr['repository_id']
                         )
                         for pr in created
                     ]
@@ -111,14 +108,11 @@ class CommitsTopicSubscriber(TopicSubscriber):
                             merge_status=pr['source_merge_status'],
                             merged_at=pr['source_merged_at'],
                             source_branch=pr['source_branch'],
-                            source_branch_id=pr['source_branch_id'],
                             source_branch_latest_commit=pr['source_branch_latest_commit'],
                             target_branch=pr['target_branch'],
-                            target_branch_id=pr['target_branch_id'],
-                            source_repository_id=pr['source_repository_id'],
+                            source_repository_key=pr['source_repository_key'],
                             source_id=pr['source_id'],
                             display_id=pr['source_display_id'],
-                            repository_id=pr['repository_id']
                         )
                         for pr in updated
                     ]

@@ -94,13 +94,16 @@ def sync_pull_requests(session, repository_key, source_pull_requests):
         )
 
         pull_requests_before_insert = session.connection().execute(
-            select([*pull_requests_temp.columns, pull_requests.c.key.label('current_key')]).select_from(
+            select([*pull_requests_temp.columns, pull_requests.c.key.label('current_key'), \
+                    repositories.c.key.label('source_repository_key')]).select_from(
                 pull_requests_temp.outerjoin(
                     pull_requests,
                     and_(
                         pull_requests_temp.c.repository_id == pull_requests.c.repository_id,
                         pull_requests_temp.c.source_id == pull_requests.c.source_id
                     )
+                ).join(
+                    repositories, pull_requests_temp.c.source_repository_id == repositories.c.id
                 )
             )
         ).fetchall()
@@ -169,6 +172,7 @@ def sync_pull_requests(session, repository_key, source_pull_requests):
                         source_display_id=pr.source_display_id,
                         deleted_at=pr.deleted_at,
                         repository_id=pr.source_repository_id,
+                        source_repository_key=pr.source_repository_key
                     )
                 )
         return dict(
