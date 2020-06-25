@@ -22,7 +22,8 @@ def get_provider_impl(repository_key, join_this=None):
         if repository:
             if repository.integration_type == VcsIntegrationTypes.gitlab.value:
                 connector = connector_factory.get_connector(
-                    connector_key=repository.connector_key
+                    connector_key=repository.connector_key,
+                    join_this=session
                 )
                 repository_impl = GitlabRepository.create(repository, connector)
             else:
