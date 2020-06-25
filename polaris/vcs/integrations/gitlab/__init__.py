@@ -1,1 +1,1 @@
-from .gitlab_connector import GitlabRepositoriesConnector, PolarisGitlabRepository, GitlabRepository
+from .gitlab_connector import GitlabRepositoriesConnector, GitlabRepository, PolarisGitlabRepository
