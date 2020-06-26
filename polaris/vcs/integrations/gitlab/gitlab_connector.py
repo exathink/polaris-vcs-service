@@ -16,7 +16,6 @@ from polaris.utils.exceptions import ProcessingException
 from polaris.utils.config import get_config_provider
 from .gitlab_webhooks import webhook_paths
 from polaris.common.enums import VcsIntegrationTypes
-from polaris.vcs import connector_factory
 
 config_provider = get_config_provider()
 
@@ -111,25 +110,24 @@ class GitlabRepositoriesConnector(GitlabConnector):
 class PolarisGitlabRepository:
 
     @staticmethod
-    def create(repository):
+    def create(repository, connector):
         if repository.integration_type == VcsIntegrationTypes.gitlab.value:
-            return GitlabRepository(repository)
+            return GitlabRepository(repository, connector)
         else:
             raise ProcessingException(f"Unknown integration_type: {repository.integration_type}")
 
 
 class GitlabRepository(PolarisGitlabRepository):
 
-    def __init__(self, repository):
+    def __init__(self, repository, connector):
         self.repository = repository
         self.source_repo_id = repository.source_id
         self.last_updated = repository.latest_pull_request_update_timestamp
-        self.gitlab_connector = connector_factory.get_connector(
-            connector_key=self.repository.connector_key
-        )
+        self.gitlab_connector = connector
         self.webhook_secret = self.gitlab_connector.webhook_secret
         self.base_url = f'{self.gitlab_connector.base_url}'
         self.personal_access_token = self.gitlab_connector.personal_access_token
+
 
     def map_pull_request_info(self, pull_request):
         return dict(
