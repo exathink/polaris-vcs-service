@@ -65,27 +65,7 @@ class CommitsTopicSubscriber(TopicSubscriber):
                 send=dict(
                     organization_key=organization_key,
                     repository_key=repository_key,
-                    new_pull_requests=[
-                        dict(
-                            key=str(pr['key']),
-                            title=pr['title'],
-                            description=pr['description'],
-                            web_url=pr['web_url'],
-                            created_at=pr['source_created_at'],
-                            updated_at=pr['source_last_updated'],
-                            deleted_at=pr['deleted_at'],
-                            state=pr['source_state'],
-                            merge_status=pr['source_merge_status'],
-                            merged_at=pr['source_merged_at'],
-                            source_branch=pr['source_branch'],
-                            source_branch_latest_commit=pr['source_branch_latest_commit'],
-                            target_branch=pr['target_branch'],
-                            source_repository_key=pr['source_repository_key'],
-                            source_id=pr['source_id'],
-                            display_id=pr['source_display_id'],
-                        )
-                        for pr in created
-                    ]
+                    new_pull_requests=created
                 )
             )
             self.publish(VcsTopic, created_message)
@@ -95,27 +75,7 @@ class CommitsTopicSubscriber(TopicSubscriber):
                 send=dict(
                     organization_key=organization_key,
                     repository_key=repository_key,
-                    updated_pull_requests=[
-                        dict(
-                            key=str(pr['key']),
-                            title=pr['title'],
-                            description=pr['description'],
-                            web_url=pr['web_url'],
-                            created_at=pr['source_created_at'],
-                            updated_at=pr['source_last_updated'],
-                            deleted_at=pr['deleted_at'],
-                            state=pr['source_state'],
-                            merge_status=pr['source_merge_status'],
-                            merged_at=pr['source_merged_at'],
-                            source_branch=pr['source_branch'],
-                            source_branch_latest_commit=pr['source_branch_latest_commit'],
-                            target_branch=pr['target_branch'],
-                            source_repository_key=pr['source_repository_key'],
-                            source_id=pr['source_id'],
-                            display_id=pr['source_display_id'],
-                        )
-                        for pr in updated
-                    ]
+                    updated_pull_requests=updated
                 )
             )
 

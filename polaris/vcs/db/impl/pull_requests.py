@@ -118,32 +118,24 @@ def sync_pull_requests(session, repository_key, source_pull_requests):
             upsert.on_conflict_do_update(
                 index_elements=['repository_id', 'source_id'],
                 set_=dict(
-                    key=upsert.excluded.key,
-                    source_display_id=upsert.excluded.source_display_id,
                     title=upsert.excluded.title,
                     description=upsert.excluded.description,
-                    web_url=upsert.excluded.web_url,
                     source_created_at=upsert.excluded.source_created_at,
                     source_last_updated=upsert.excluded.source_last_updated,
                     last_sync=upsert.excluded.last_sync,
                     source_state=upsert.excluded.source_state,
                     source_merge_status=upsert.excluded.source_merge_status,
                     source_merged_at=upsert.excluded.source_merged_at,
-                    source_branch=upsert.excluded.source_branch,
-                    source_branch_id=upsert.excluded.source_branch_id,
                     source_branch_latest_commit=upsert.excluded.source_branch_latest_commit,
                     source_branch_latest_seq_no=upsert.excluded.source_branch_latest_seq_no,
-                    target_branch=upsert.excluded.target_branch,
-                    target_branch_id=upsert.excluded.target_branch_id,
-                    source_repository_source_id=upsert.excluded.source_repository_source_id,
-                    target_repository_source_id=upsert.excluded.target_repository_source_id,
-                    source_repository_id=upsert.excluded.source_repository_id,
                     deleted_at=upsert.excluded.deleted_at,
                 )
             )
         )
 
         synced_pull_requests = []
+        # NOTE: Had to check for None, as in the case when there are no fetched PRs,
+        # pull_requests_before_insert has entries with all None values
         for pr in pull_requests_before_insert:
             if pr.source_id is not None:
                 synced_pull_requests.append(
@@ -153,25 +145,17 @@ def sync_pull_requests(session, repository_key, source_pull_requests):
                         title=pr.title,
                         description=pr.description,
                         web_url=pr.web_url,
-                        source_created_at=pr.source_created_at,
-                        source_last_updated=pr.source_last_updated,
-                        last_sync=pr.last_sync,
-                        source_state=pr.source_state,
-                        source_merge_status=pr.source_merge_status,
-                        source_merged_at=pr.source_merged_at,
+                        created_at=pr.source_created_at,
+                        updated_at=pr.source_last_updated,
+                        state=pr.source_state,
+                        merge_status=pr.source_merge_status,
+                        merged_at=pr.source_merged_at,
                         source_branch=pr.source_branch,
-                        source_branch_id=pr.source_branch_id,
                         source_branch_latest_commit=pr.source_branch_latest_commit,
-                        source_branch_latest_seq_no=pr.source_branch_latest_seq_no,
                         target_branch=pr.target_branch,
-                        target_branch_id=pr.target_branch_id,
-                        source_repository_source_id=pr.source_repository_source_id,
-                        target_repository_source_id=pr.target_repository_source_id,
-                        source_repository_id=pr.source_repository_id,
                         source_id=pr.source_id,
-                        source_display_id=pr.source_display_id,
+                        display_id=pr.source_display_id,
                         deleted_at=pr.deleted_at,
-                        repository_id=pr.source_repository_id,
                         source_repository_key=pr.source_repository_key
                     )
                 )
