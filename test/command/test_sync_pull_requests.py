@@ -29,8 +29,10 @@ class TestSyncGitlabPullRequests:
                 ]
             ]
             for command_output in commands.sync_pull_requests(repository_key):
-                pull_requests = command_output
-                assert pull_requests[0]['is_new']
+                result = command_output
+                assert result['success']
+                prs = result['pull_requests']
+                assert prs[0]['is_new']
         updated_pull_request = dict(
             **pull_requests_common_fields
         )
@@ -45,8 +47,10 @@ class TestSyncGitlabPullRequests:
                 ]
             ]
             for command_output in commands.sync_pull_requests(repository_key):
-                pull_requests = command_output
-                assert not pull_requests[0]['is_new']
+                result = command_output
+                assert result['success']
+                prs = result['pull_requests']
+                assert not prs[0]['is_new']
 
     def it_maps_fetched_pull_request_correctly_to_polaris_pr(self, setup_sync_repos_gitlab):
         _, _ = setup_sync_repos_gitlab
@@ -127,6 +131,7 @@ class TestSyncGitlabPullRequests:
         }
         expected_mapped_pr = {
             'source_id': 61296045,
+            "source_display_id": 69,
             'title': 'PO-178 Graphql API updates.',
             'description': 'PO-178',
             'source_state': 'merged',

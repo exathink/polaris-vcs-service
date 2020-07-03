@@ -49,7 +49,6 @@ class ConnectorsTopicSubscriber(TopicSubscriber):
         logger.info(
             f"Processing  {message.message_type}: "
             f" Connector Key : {connector_key}"
-
         )
         try:
             yield from ConnectorsTopicSubscriber.sync_repositories(connector_key,
