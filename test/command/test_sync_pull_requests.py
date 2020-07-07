@@ -148,3 +148,29 @@ class TestSyncGitlabPullRequests:
         repository_provider = repository_factory.get_provider_impl(repository_key)
         mapped_pr = repository_provider.map_pull_request_info(gitlab_fetched_pr)
         assert mapped_pr == expected_mapped_pr
+
+
+class TestSyncPullRequestOtherCases:
+
+    # This is a legal test because there are repos in production for which there are no
+    # connectors. These were legacy repos imported before there was a connector architecture in place
+    # PRs cannot be pulled from these repos. But we still need to handle them so that we dont get
+    # unnecessary error noises in production.
+
+    def it_returns_an_empty_list_when_there_is_no_connector_for_the_repo(self, setup_org_repo_no_connector):
+        _, _ = setup_org_repo_no_connector
+        repository_key = test_repository_key
+
+        for command_output in commands.sync_pull_requests(repository_key):
+            result = command_output
+            assert len(result) == 0
+
+    # this test is there to test temporarily for the case when we have no github implementation
+    # for pull requests. It can be deleted when we implement this
+    def it_returns_an_empty_list_when_the_repo_type_is_github(self, setup_org_repo, setup_connectors):
+        _, _ = setup_org_repo
+        repository_key = test_repository_key
+
+        for command_output in commands.sync_pull_requests(repository_key):
+            result = command_output
+            assert len(result) == 0

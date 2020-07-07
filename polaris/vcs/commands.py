@@ -40,10 +40,13 @@ def sync_repositories(connector_key, tracking_receipt_key=None):
 def sync_pull_requests(repository_key):
     log.info(f'Sync pull requests starting')
     repository_provider = repository_factory.get_provider_impl(repository_key)
-    yield polaris.vcs.db.api.sync_pull_requests(
-        repository_key,
-        repository_provider.fetch_pull_requests_from_source()
-    )
+    if repository_provider:
+        yield polaris.vcs.db.api.sync_pull_requests(
+            repository_key,
+            repository_provider.fetch_pull_requests_from_source()
+        )
+    else:
+        return []
 
 
 def register_repository_push_webhooks(organization_key, connector_key, repository_summaries):
@@ -80,4 +83,5 @@ def test_vcs_connector(connector_key, join_this=None):
             connector_key=connector_key,
             join_this=session
         )
-        return vcs_connector.test()
+        if vcs_connector:
+            return vcs_connector.test()
