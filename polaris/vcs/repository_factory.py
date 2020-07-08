@@ -8,6 +8,7 @@
 
 # Author: Pragya Goyal
 
+import logging
 from polaris.common.enums import VcsIntegrationTypes
 from polaris.utils.exceptions import ProcessingException
 from polaris.vcs.integrations.gitlab import GitlabRepository
@@ -15,22 +16,23 @@ from polaris.common import db
 from polaris.repos.db.model import Repository
 from polaris.vcs import connector_factory
 
+log = logging.getLogger('polaris.vcs.service.repository_factory')
+
 
 def get_provider_impl(repository_key, join_this=None):
     with db.orm_session(join_this) as session:
         repository = Repository.find_by_repository_key(session, repository_key)
         if repository:
-            if repository.integration_type == VcsIntegrationTypes.gitlab.value:
-                connector = connector_factory.get_connector(
-                    connector_key=repository.connector_key,
-                    join_this=session
-                )
-                repository_impl = GitlabRepository.create(repository, connector)
-            else:
-                raise ProcessingException(
-                    f'Could not determine repository_implementation for repository_key {repository.key}'
-                )
-            return repository_impl
+
+            connector = connector_factory.get_connector(
+                connector_key=repository.connector_key,
+                join_this=session
+            )
+            if connector:
+                if repository.integration_type == VcsIntegrationTypes.gitlab.value:
+                    return GitlabRepository.create(repository, connector)
+                else:
+                    log.info(f'Could not determine repository_implementation for repository_key {repository.key}')
 
         else:
             raise ProcessingException(

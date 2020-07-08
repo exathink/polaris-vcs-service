@@ -160,6 +160,35 @@ def setup_org_repo_gitlab(setup_schema, cleanup):
 
 
 @pytest.yield_fixture()
+def setup_org_repo_no_connector(setup_schema, cleanup):
+    with db.orm_session() as session:
+        session.expire_on_commit = False
+        organization = Organization(
+            organization_key=test_organization_key,
+            name='test-org',
+            public=False
+        )
+        repository = Repository(
+            organization_key=test_organization_key,
+            key=test_repository_key,
+            name=test_repository_name,
+            source_id=test_repository_source_id,
+            import_state=0,
+            description='A neat new repo without a connector',
+            integration_type=VcsIntegrationTypes.github.value,
+            url='https://foo.bar.com'
+
+        )
+        organization.repositories.append(
+            repository
+        )
+        session.add(organization)
+        session.flush()
+
+    yield repository, organization
+
+
+@pytest.yield_fixture()
 def setup_commits(setup_org_repo):
     repository, organization = setup_org_repo
 

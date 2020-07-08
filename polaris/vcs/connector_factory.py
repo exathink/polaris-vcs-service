@@ -18,21 +18,21 @@ from polaris.vcs.integrations.gitlab import GitlabRepositoriesConnector
 
 def get_connector(connector_name=None, connector_key=None, join_this=None):
     with db.orm_session(join_this) as session:
-
-        if connector_key is not None:
-            connector = find_connector(connector_key, join_this=session)
-        if connector_name is not None:
-            connector = find_connector_by_name(connector_name, join_this=session)
-        if connector:
-            if connector.type == ConnectorType.github.value:
-                return GithubRepositoriesConnector(connector)
-            elif connector.type == ConnectorType.atlassian.value:
-                return BitBucketConnector(connector)
-            elif connector.type == ConnectorType.gitlab.value:
-                return GitlabRepositoriesConnector(connector)
+        if connector_key is not None or connector_name is not None:
+            if connector_key is not None:
+                connector = find_connector(connector_key, join_this=session)
             else:
-                raise ProcessingException(f'No Repositories connector registered for connector type: {connector.type} '
-                                          f'Connector Key was {connector_key}')
+                connector = find_connector_by_name(connector_name, join_this=session)
+            if connector:
+                if connector.type == ConnectorType.github.value:
+                    return GithubRepositoriesConnector(connector)
+                elif connector.type == ConnectorType.atlassian.value:
+                    return BitBucketConnector(connector)
+                elif connector.type == ConnectorType.gitlab.value:
+                    return GitlabRepositoriesConnector(connector)
+                else:
+                    raise ProcessingException(f'No Repositories connector registered for connector type: {connector.type} '
+                                              f'Connector Key was {connector_key}')
 
-        else:
-            raise ProcessingException(f'Cannot find connector for connector_key {connector_key}')
+            else:
+                raise ProcessingException(f'Cannot find connector for connector_key {connector_key}')
