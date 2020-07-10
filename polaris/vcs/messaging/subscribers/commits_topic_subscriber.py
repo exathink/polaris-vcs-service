@@ -65,7 +65,7 @@ class CommitsTopicSubscriber(TopicSubscriber):
                 send=dict(
                     organization_key=organization_key,
                     repository_key=repository_key,
-                    new_pull_requests=created
+                    pull_request_summaries=created
                 )
             )
             self.publish(VcsTopic, created_message)
@@ -75,7 +75,7 @@ class CommitsTopicSubscriber(TopicSubscriber):
                 send=dict(
                     organization_key=organization_key,
                     repository_key=repository_key,
-                    updated_pull_requests=updated
+                    pull_request_summaries=updated
                 )
             )
 
