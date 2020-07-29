@@ -75,37 +75,37 @@ class GithubRepository(PolarisGithubRepository):
         self.repository = repository
         self.source_repo_id = repository.source_id
         self.last_updated = repository.latest_pull_request_update_timestamp
-        self.github_connector = connector
-        self.github = self.github_connector.get_github_client()
+        self.connector = connector
+        self.access_token = connector.access_token
 
     def map_pull_request_info(self, pull_request):
         return dict(
-            source_id=pull_request['id'],
-            source_display_id=pull_request['number'],
-            title=pull_request['title'],
-            description=pull_request['body'],
-            source_state=pull_request['state'],
-            source_created_at=pull_request['created_at'],
-            source_last_updated=pull_request['updated_at'],
-            # TODO: Figure out how to determine merge status. \
-            #  Keeping default as 'can_be_merged' for now
-            source_merge_status= 'can_be_merged',
-            source_merged_at=pull_request['merged_at'],
-            source_branch=pull_request['head']['ref'],
-            target_branch=pull_request['base']['ref'],
-            source_repository_source_id=pull_request['head']['repo']['id'],
-            target_repository_source_id=pull_request['base']['repo']['id'],
-            web_url=pull_request['url']
+            source_id=pull_request.id,
+            source_display_id=pull_request.number,
+            title=pull_request.title,
+            description=pull_request.body,
+            source_state=pull_request.state,
+            source_created_at=pull_request.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            source_last_updated=pull_request.updated_at.strftime("%Y-%m-%d %H:%M:%S") if pull_request.updated_at else None,
+            # TODO: Figure out how to determine merge status.
+            source_merge_status=None,
+            source_merged_at=pull_request.merged_at.strftime("%Y-%m-%d %H:%M:%S") if pull_request.merged_at else None,
+            source_branch=pull_request.head.ref,
+            target_branch=pull_request.base.ref,
+            source_repository_source_id=pull_request.head.repo.id,
+            target_repository_source_id=pull_request.base.repo.id,
+            web_url=pull_request.url
         )
 
-    def fetch_pull_requests(self):
+    def fetch_pull_requests_from_source(self):
         if self.access_token is not None:
-            repo = self.github.get_repo(self.repository.source_id)
+            github = self.connector.get_github_client()
+            repo = github.get_repo(int(self.repository.source_id))
             # TODO: There is no 'since' parameter so fetching all PRs. \
             #  Checking during iteration on pages for last updated PR
             prs_iterator = repo.get_pulls(
                 state='all',
-                sort='created',
+                sort='updated',
                 direction='desc'
             )
             fetched = 0
@@ -122,9 +122,9 @@ class GithubRepository(PolarisGithubRepository):
                     if pull_requests[-1]['created_at'] < self.last_updated:
                         fetched_upto_last_update = True
 
-    def fetch_pull_requests_from_source(self):
-        for pull_requests in self.fetch_pull_requests():
-            yield [
-                self.map_pull_request_info(pr)
-                for pr in pull_requests
-            ]
+    # def fetch_pull_requests_from_source(self):
+    #     for pull_requests in self.fetch_pull_requests():
+    #         yield [
+    #             self.map_pull_request_info(pr)
+    #             for pr in pull_requests
+    #         ]
