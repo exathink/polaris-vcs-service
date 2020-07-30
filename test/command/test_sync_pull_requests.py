@@ -144,9 +144,95 @@ class TestSyncGitlabPullRequests:
             'source_repository_source_id': 5419303,
             'target_repository_source_id': 5419303,
             'web_url': 'https://gitlab.com/polaris-services/polaris-analytics-service/-/merge_requests/69'
-        }
+           }
         repository_provider = repository_factory.get_provider_impl(repository_key)
         mapped_pr = repository_provider.map_pull_request_info(gitlab_fetched_pr)
+        assert mapped_pr == expected_mapped_pr
+
+
+class DictToObj(object):
+    def __init__(self, d):
+        for a, b in d.items():
+            if isinstance(b, (list, tuple)):
+               setattr(self, a, [DictToObj(x) if isinstance(x, dict) else x for x in b])
+            else:
+               setattr(self, a, DictToObj(b) if isinstance(b, dict) else b)
+
+
+class TestSyncGithubPullRequests:
+
+    def it_fetches_latest_updated_pull_requests_from_github(self, setup_sync_repos):
+        _, _ = setup_sync_repos
+        repository_key = test_repository_key
+
+        with patch(
+                'polaris.vcs.integrations.github.GithubRepository.fetch_pull_requests_from_source') as fetch_prs:
+            fetch_prs.return_value = [
+                [
+                    dict(
+                        **pull_requests_common_fields
+                    )
+                ]
+            ]
+            for command_output in commands.sync_pull_requests(repository_key):
+                result = command_output
+                assert result['success']
+                prs = result['pull_requests']
+                assert prs[0]['is_new']
+        updated_pull_request = dict(
+            **pull_requests_common_fields
+        )
+        updated_pull_request['source_last_updated'] = datetime.utcnow()
+        with patch(
+                'polaris.vcs.integrations.github.GithubRepository.fetch_pull_requests_from_source') as fetch_prs:
+            fetch_prs.return_value = [
+                [
+                    dict(
+                        **updated_pull_request
+                    )
+                ]
+            ]
+            for command_output in commands.sync_pull_requests(repository_key):
+                result = command_output
+                assert result['success']
+                prs = result['pull_requests']
+                assert not prs[0]['is_new']
+
+    def it_maps_fetched_pull_request_correctly_to_polaris_pr(self, setup_sync_repos):
+        _, _ = setup_sync_repos
+        repository_key = test_repository_key
+        github_fetched_pr_dict = dict(
+            id=457807963,
+            number=5,
+            title='Create pull_requests.txt',
+            body='',
+            state='open',
+            created_at=datetime(2020, 7, 28, 13, 26, 8),
+            updated_at=datetime(2020, 7, 28, 13, 26, 8),
+            merged_at=None,
+            head=dict(ref='pr_test', repo=dict(id=195584868)),
+            base=dict(ref='master', repo=dict(id=195584868)),
+            url="https://api.github.com/repos/exathink/urjuna-test1/pulls/5"
+        )
+        github_fetched_pr = DictToObj(github_fetched_pr_dict)
+        expected_mapped_pr = {
+              "source_id":457807963,
+              "source_display_id":5,
+              "title":"Create pull_requests.txt",
+              "description":"",
+              "source_state":"open",
+              "source_created_at":"2020-07-28 13:26:08",
+              "source_last_updated":"2020-07-28 13:26:08",
+              "source_merge_status":None,
+              "source_merged_at":None,
+              "source_branch":"pr_test",
+              "target_branch":"master",
+              "source_repository_source_id":195584868,
+              "target_repository_source_id":195584868,
+              "web_url":"https://api.github.com/repos/exathink/urjuna-test1/pulls/5"
+           }
+        repository_provider = repository_factory.get_provider_impl(repository_key)
+        mapped_pr = repository_provider.map_pull_request_info(github_fetched_pr)
         assert mapped_pr == expected_mapped_pr
 
 
@@ -165,12 +251,3 @@ class TestSyncPullRequestOtherCases:
             result = command_output
             assert len(result) == 0
 
-    # this test is there to test temporarily for the case when we have no github implementation
-    # for pull requests. It can be deleted when we implement this
-    def it_returns_an_empty_list_when_the_repo_type_is_github(self, setup_org_repo, setup_connectors):
-        _, _ = setup_org_repo
-        repository_key = test_repository_key
-
-        for command_output in commands.sync_pull_requests(repository_key):
-            result = command_output
-            assert len(result) == 0

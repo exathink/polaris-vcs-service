@@ -103,3 +103,94 @@ class TestSyncGitlabPullRequests:
         assert prs[0]['state'] == 'merged'
         assert db.connection().execute(
             "select count(*) from repos.pull_requests where source_id='61296045' and source_state='merged'").scalar() == 1
+
+
+class TestSyncGithubPullRequests:
+
+    def it_inserts_newly_fetched_pull_requests_into_db(self, setup_org_repo):
+        repository, organization = setup_org_repo
+        pull_requests = [
+            {
+                "source_id": 61296045,
+                "source_display_id": "69",
+                "title": "PO-178 Graphql API updates.",
+                "description": "PO-178",
+                "source_state": "merged",
+                "source_created_at": "2020-06-11T18:56:59.410Z",
+                "source_last_updated": "2020-06-11T18:57:08.777Z",
+                "source_merge_status": None,
+                "source_merged_at": "2020-06-11T18:57:08.818Z",
+                "source_branch": "PO-178",
+                "target_branch": "master",
+                "source_repository_source_id": 1000,
+                "target_repository_source_id": 1000,
+                "web_url": "https://github.com/polaris-services/polaris-analytics-service/-/merge_requests/69"
+            },
+        ]
+
+        result = api.sync_pull_requests(test_repository_key, iter([pull_requests]))
+        assert result['success']
+        prs = result['pull_requests']
+        assert prs[0]['is_new']
+        assert prs[0]['title'] == pull_requests[0]['title']
+        assert db.connection().execute("select count(*) from repos.pull_requests where source_id='61296045'").scalar() == 1
+
+
+    def it_updates_pull_request_existing_in_db(self, setup_org_repo):
+        repository, organization = setup_org_repo
+        pull_requests = [
+            {
+                "source_id": 61296045,
+                "source_display_id": "69",
+                "title": "PO-178 Graphql API updates.",
+                "description": "PO-178",
+                "source_state": "opened",
+                "source_created_at": "2020-06-11T18:56:59.410Z",
+                "source_last_updated": "2020-06-11T18:57:08.777Z",
+                "source_merge_status": None,
+                "source_merged_at": "2020-06-11T18:57:08.818Z",
+                "source_branch": "PO-178",
+                "target_branch": "master",
+                "source_repository_source_id": 1000,
+                "target_repository_source_id": 1000,
+                "web_url": "https://github.com/polaris-services/polaris-analytics-service/-/merge_requests/69"
+            },
+        ]
+
+
+        result = api.sync_pull_requests(test_repository_key, iter([pull_requests]))
+        assert result['success']
+        prs = result['pull_requests']
+        assert prs[0]['is_new']
+        assert prs[0]['title'] == pull_requests[0]['title']
+        assert prs[0]['state'] == 'opened'
+        assert db.connection().execute(
+            "select count(*) from repos.pull_requests where source_id='61296045' and source_state='opened'").scalar() == 1
+
+        pull_requests = [
+            {
+                "source_id": 61296045,
+                "source_display_id": "69",
+                "title": "PO-178 Graphql API updates.",
+                "description": "PO-178",
+                "source_state": "merged",
+                "source_created_at": "2020-06-11T18:56:59.410Z",
+                "source_last_updated": "2020-06-11T18:57:08.777Z",
+                "source_merge_status": None,
+                "source_merged_at": "2020-06-11T18:57:08.818Z",
+                "source_branch": "PO-178",
+                "target_branch": "master",
+                "source_repository_source_id": 1000,
+                "target_repository_source_id": 1000,
+                "web_url": "https://gitlab.com/polaris-services/polaris-analytics-service/-/merge_requests/69"
+            },
+        ]
+
+        result = api.sync_pull_requests(test_repository_key, iter([pull_requests]))
+        assert result['success']
+        prs = result['pull_requests']
+        assert not prs[0]['is_new']
+        assert prs[0]['title'] == pull_requests[0]['title']
+        assert prs[0]['state'] == 'merged'
+        assert db.connection().execute(
+            "select count(*) from repos.pull_requests where source_id='61296045' and source_state='merged'").scalar() == 1

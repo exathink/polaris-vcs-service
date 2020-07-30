@@ -19,7 +19,7 @@ from polaris.common.enums import VcsIntegrationTypes
 
 config_provider = get_config_provider()
 
-logger = logging.getLogger('polaris.vcs.integrations.github')
+logger = logging.getLogger('polaris.vcs.integrations.gitlab')
 
 
 class GitlabRepositoriesConnector(GitlabConnector):
