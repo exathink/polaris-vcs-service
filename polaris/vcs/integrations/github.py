@@ -9,9 +9,7 @@
 # Author: Krishna Kumar
 
 import logging
-from datetime import datetime, timedelta
 from polaris.integrations.github import GithubConnector
-from polaris.common.enums import VcsIntegrationTypes
 from polaris.utils.exceptions import ProcessingException
 from polaris.common.enums import VcsIntegrationTypes
 
@@ -111,7 +109,7 @@ class GithubRepository(PolarisGithubRepository):
             fetched = 0
             fetched_upto_last_update = False
             # FIXME: Hardcoded value for initial import days
-            while prs_iterator._couldGrow() or fetched_upto_last_update or fetched < 90:
+            while prs_iterator._couldGrow() and not fetched_upto_last_update and fetched < 90:
                 pull_requests = [
                     self.map_pull_request_info(pr)
                     for pr in prs_iterator._fetchNextPage()
@@ -122,9 +120,3 @@ class GithubRepository(PolarisGithubRepository):
                     if pull_requests[-1]['created_at'] < self.last_updated:
                         fetched_upto_last_update = True
 
-    # def fetch_pull_requests_from_source(self):
-    #     for pull_requests in self.fetch_pull_requests():
-    #         yield [
-    #             self.map_pull_request_info(pr)
-    #             for pr in pull_requests
-    #         ]

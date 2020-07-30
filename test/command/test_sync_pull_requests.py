@@ -150,6 +150,15 @@ class TestSyncGitlabPullRequests:
         assert mapped_pr == expected_mapped_pr
 
 
+class DictToObj(object):
+    def __init__(self, d):
+        for a, b in d.items():
+            if isinstance(b, (list, tuple)):
+               setattr(self, a, [obj(x) if isinstance(x, dict) else x for x in b])
+            else:
+               setattr(self, a, obj(b) if isinstance(b, dict) else b)
+
+
 class TestSyncGithubPullRequests:
 
     def it_fetches_latest_updated_pull_requests_from_github(self, setup_sync_repos):
@@ -192,11 +201,21 @@ class TestSyncGithubPullRequests:
     def it_maps_fetched_pull_request_correctly_to_polaris_pr(self, setup_sync_repos):
         _, _ = setup_sync_repos
         repository_key = test_repository_key
-        import pickle
-        with open('polaris-vcs-service/test/command/github_pull_request_sample', 'rb') as pr_file:
-            github_fetched_pr = pickle.load(pr_file)
-        expected_mapped_pr = [
-           {
+        github_fetched_pr_dict = dict(
+            id=457807963,
+            number=5,
+            title='Create pull_requests.txt',
+            body='',
+            state='open',
+            created_at=datetime(2020, 7, 28, 13, 26, 8),
+            updated_at=datetime(2020, 7, 28, 13, 26, 8),
+            merged_at=None,
+            head=dict(ref='pr_test', repo=dict(id=195584868)),
+            base=dict(ref='master', repo=dict(id=195584868)),
+            url="https://api.github.com/repos/exathink/urjuna-test1/pulls/5"
+        )
+        github_fetched_pr = DictToObj(github_fetched_pr_dict)
+        expected_mapped_pr = {
               "source_id":457807963,
               "source_display_id":5,
               "title":"Create pull_requests.txt",
@@ -212,7 +231,6 @@ class TestSyncGithubPullRequests:
               "target_repository_source_id":195584868,
               "web_url":"https://api.github.com/repos/exathink/urjuna-test1/pulls/5"
            }
-        ]
         repository_provider = repository_factory.get_provider_impl(repository_key)
         mapped_pr = repository_provider.map_pull_request_info(github_fetched_pr)
         assert mapped_pr == expected_mapped_pr
