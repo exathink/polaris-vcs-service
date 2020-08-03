@@ -73,6 +73,7 @@ pull_requests_common_fields = dict(
     title="PO-178 Graphql API updates.",
     description="PO-178",
     source_state="merged",
+    state="merged",
     source_created_at="2020-06-11T18:56:59.410Z",
     source_last_updated="2020-06-11T18:57:08.777Z",
     source_merge_status="can_be_merged",
