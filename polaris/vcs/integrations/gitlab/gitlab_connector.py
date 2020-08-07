@@ -128,7 +128,7 @@ class GitlabRepository(PolarisGitlabRepository):
         self.base_url = f'{self.gitlab_connector.base_url}'
         self.personal_access_token = self.gitlab_connector.personal_access_token
         self.state_mapping = dict(
-            open=GitlabPullRequestState.open.value,
+            opened=GitlabPullRequestState.opened.value,
             closed=GitlabPullRequestState.closed.value,
             merged=GitlabPullRequestState.merged.value,
             locked=GitlabPullRequestState.locked.value

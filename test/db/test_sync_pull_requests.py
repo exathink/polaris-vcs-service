@@ -55,8 +55,8 @@ class TestSyncGitlabPullRequests:
                 "source_display_id": "69",
                 "title": "PO-178 Graphql API updates.",
                 "description": "PO-178",
-                "source_state": "open",
-                "state": GitlabPullRequestState.open.value,
+                "source_state": "opened",
+                "state": GitlabPullRequestState.opened.value,
                 "source_created_at": "2020-06-11T18:56:59.410Z",
                 "source_last_updated": "2020-06-11T18:57:08.777Z",
                 "source_merge_status": "can_be_merged",
@@ -77,7 +77,7 @@ class TestSyncGitlabPullRequests:
         assert prs[0]['title'] == pull_requests[0]['title']
         assert prs[0]['state'] == 'open'
         assert db.connection().execute(
-            "select count(*) from repos.pull_requests where source_id='61296045' and source_state='open'").scalar() == 1
+            "select count(*) from repos.pull_requests where source_id='61296045' and source_state='opened'").scalar() == 1
 
         pull_requests = [
             {

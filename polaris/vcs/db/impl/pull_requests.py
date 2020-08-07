@@ -13,7 +13,7 @@ import logging
 from datetime import datetime
 from polaris.repos.db.model import Repository, pull_requests, repositories
 from polaris.common import db
-from sqlalchemy import select, and_, Column, String, Integer
+from sqlalchemy import select, and_, Column, Integer
 from sqlalchemy.dialects.postgresql import insert
 
 log = logging.getLogger('polaris.vcs.db.impl.pull_requests')
