@@ -104,3 +104,83 @@ class BitBucketConnector(BitBucketBaseConnector):
                 for repo in repositories
                 if repo['scm'] == 'git'  # we dont support hg or sourcetree which are options in bitbucket
             ]
+
+
+class PolarisBitbucketRepository:
+
+    @staticmethod
+    def create(repository, connector):
+        if repository.integration_type == VcsIntegrationTypes.Bitbucket.value:
+            return BitbucketRepository(repository, connector)
+        else:
+            raise ProcessingException(f"Unknown integration_type: {repository.integration_type}")
+
+
+class BitbucketRepository(BitBucketBaseConnector, PolarisBitbucketRepository):
+
+    def __init__(self, repository, connector):
+        self.repository = repository
+        self.source_repo_id = repository.source_id
+        self.last_updated = repository.latest_pull_request_update_timestamp
+        self.state_mapping = dict(
+            open=BitbucketPullRequestState.open.value,
+            superseded=BitbucketPullRequestState.superseded.value,
+            merged=BitbucketPullRequestState.merged.value,
+            declined=BitbucketPullRequestState.declined.value
+        )
+        super().__init__(connector)
+        self.base_url = f'{connector.base_url}'
+        self.atlassian_account_key = connector.atlassian_account_key
+
+
+
+    def map_pull_request_info(self, pull_request):
+        return dict(
+            source_id=pull_request['id'],
+            source_display_id=pull_request['iid'],
+            title=pull_request['title'],
+            description=pull_request['description'],
+            source_state=pull_request['state'],
+            state=self.state_mapping[pull_request['state']],
+            source_created_at=pull_request['created_at'],
+            source_last_updated=pull_request['updated_at'],
+            source_merge_status=pull_request['merge_status'],
+            source_merged_at=pull_request['merged_at'],
+            source_branch=pull_request['source_branch'],
+            target_branch=pull_request['target_branch'],
+            source_repository_source_id=pull_request['source_project_id'],
+            target_repository_source_id=pull_request['target_project_id'],
+            web_url=pull_request['web_url']
+        )
+
+    def fetch_pull_requests(self):
+        fetch_repos_url = f'/2.0/repositories/{{{self.atlassian_account_key}}}'
+        params = None
+
+        while fetch_repos_url is not None:
+            response = self.get(
+                fetch_repos_url,
+                params=params,
+                headers={"Accept": "application/json"},
+            )
+
+            if response.ok:
+                result = response.json()
+                yield result['values']
+                fetch_repos_url, params = self.get_next_result_url(result.get('next'))
+            else:
+                log.error(
+                    f'Bitbucket Fetch repositories failed: '
+                    f'{self.connector.name}: {fetch_repos_url} {response.text} ({response.status_code})'
+                )
+                raise ProcessingException(
+                    f'Bitbucket Fetch repositories failed: '
+                    f'{response.text} ({response.status_code})'
+                )
+
+    def fetch_pull_requests_from_source(self):
+        for pull_requests in self.fetch_pull_requests():
+            yield [
+                self.map_pull_request_info(pr)
+                for pr in pull_requests
+            ]
