@@ -12,6 +12,7 @@ from unittest.mock import patch
 
 from ..shared_fixtures import *
 from polaris.vcs.db import api
+from polaris.common.enums import GitlabPullRequestState, GithubPullRequestState
 
 
 class TestSyncGitlabPullRequests:
@@ -25,6 +26,7 @@ class TestSyncGitlabPullRequests:
                 "title": "PO-178 Graphql API updates.",
                 "description": "PO-178",
                 "source_state": "merged",
+                "state": GitlabPullRequestState.merged.value,
                 "source_created_at": "2020-06-11T18:56:59.410Z",
                 "source_last_updated": "2020-06-11T18:57:08.777Z",
                 "source_merge_status": "can_be_merged",
@@ -54,6 +56,7 @@ class TestSyncGitlabPullRequests:
                 "title": "PO-178 Graphql API updates.",
                 "description": "PO-178",
                 "source_state": "opened",
+                "state": GitlabPullRequestState.opened.value,
                 "source_created_at": "2020-06-11T18:56:59.410Z",
                 "source_last_updated": "2020-06-11T18:57:08.777Z",
                 "source_merge_status": "can_be_merged",
@@ -72,7 +75,7 @@ class TestSyncGitlabPullRequests:
         prs = result['pull_requests']
         assert prs[0]['is_new']
         assert prs[0]['title'] == pull_requests[0]['title']
-        assert prs[0]['state'] == 'opened'
+        assert prs[0]['state'] == 'open'
         assert db.connection().execute(
             "select count(*) from repos.pull_requests where source_id='61296045' and source_state='opened'").scalar() == 1
 
@@ -83,6 +86,7 @@ class TestSyncGitlabPullRequests:
                 "title": "PO-178 Graphql API updates.",
                 "description": "PO-178",
                 "source_state": "merged",
+                "state": GitlabPullRequestState.merged.value,
                 "source_created_at": "2020-06-11T18:56:59.410Z",
                 "source_last_updated": "2020-06-11T18:57:08.777Z",
                 "source_merge_status": "can_be_merged",
@@ -116,6 +120,7 @@ class TestSyncGithubPullRequests:
                 "title": "PO-178 Graphql API updates.",
                 "description": "PO-178",
                 "source_state": "merged",
+                "state": GithubPullRequestState.merged.value,
                 "source_created_at": "2020-06-11T18:56:59.410Z",
                 "source_last_updated": "2020-06-11T18:57:08.777Z",
                 "source_merge_status": None,
@@ -144,7 +149,8 @@ class TestSyncGithubPullRequests:
                 "source_display_id": "69",
                 "title": "PO-178 Graphql API updates.",
                 "description": "PO-178",
-                "source_state": "opened",
+                "source_state": "open",
+                "state": GithubPullRequestState.open.value,
                 "source_created_at": "2020-06-11T18:56:59.410Z",
                 "source_last_updated": "2020-06-11T18:57:08.777Z",
                 "source_merge_status": None,
@@ -163,9 +169,9 @@ class TestSyncGithubPullRequests:
         prs = result['pull_requests']
         assert prs[0]['is_new']
         assert prs[0]['title'] == pull_requests[0]['title']
-        assert prs[0]['state'] == 'opened'
+        assert prs[0]['state'] == 'open'
         assert db.connection().execute(
-            "select count(*) from repos.pull_requests where source_id='61296045' and source_state='opened'").scalar() == 1
+            "select count(*) from repos.pull_requests where source_id='61296045' and source_state='open'").scalar() == 1
 
         pull_requests = [
             {
@@ -174,6 +180,7 @@ class TestSyncGithubPullRequests:
                 "title": "PO-178 Graphql API updates.",
                 "description": "PO-178",
                 "source_state": "merged",
+                "state": GithubPullRequestState.merged.value,
                 "source_created_at": "2020-06-11T18:56:59.410Z",
                 "source_last_updated": "2020-06-11T18:57:08.777Z",
                 "source_merge_status": None,

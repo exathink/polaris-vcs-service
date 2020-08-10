@@ -15,7 +15,7 @@ from polaris.integrations.gitlab import GitlabConnector
 from polaris.utils.exceptions import ProcessingException
 from polaris.utils.config import get_config_provider
 from .gitlab_webhooks import webhook_paths
-from polaris.common.enums import VcsIntegrationTypes
+from polaris.common.enums import VcsIntegrationTypes, GitlabPullRequestState
 
 config_provider = get_config_provider()
 
@@ -127,6 +127,12 @@ class GitlabRepository(PolarisGitlabRepository):
         self.webhook_secret = self.gitlab_connector.webhook_secret
         self.base_url = f'{self.gitlab_connector.base_url}'
         self.personal_access_token = self.gitlab_connector.personal_access_token
+        self.state_mapping = dict(
+            opened=GitlabPullRequestState.opened.value,
+            closed=GitlabPullRequestState.closed.value,
+            merged=GitlabPullRequestState.merged.value,
+            locked=GitlabPullRequestState.locked.value
+        )
 
 
     def map_pull_request_info(self, pull_request):
@@ -136,6 +142,7 @@ class GitlabRepository(PolarisGitlabRepository):
             title=pull_request['title'],
             description=pull_request['description'],
             source_state=pull_request['state'],
+            state=self.state_mapping[pull_request['state']],
             source_created_at=pull_request['created_at'],
             source_last_updated=pull_request['updated_at'],
             source_merge_status=pull_request['merge_status'],
