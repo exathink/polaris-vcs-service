@@ -9,4 +9,4 @@
 # Author: Krishna Kumar
 
 from .bitbucket_connector import BitBucketConnector
-from .bitbucket_connector import BitbucketRepository
+from .bitbucket_connector import BitBucketRepository

@@ -105,17 +105,17 @@ class BitBucketConnector(BitBucketBaseConnector):
             ]
 
 
-class PolarisBitbucketRepository:
+class PolarisBitBucketRepository:
 
     @staticmethod
     def create(repository, connector):
         if repository.integration_type == VcsIntegrationTypes.bitbucket.value:
-            return BitbucketRepository(repository, connector)
+            return BitBucketRepository(repository, connector)
         else:
             raise ProcessingException(f"Unknown integration_type: {repository.integration_type}")
 
 
-class BitbucketRepository(PolarisBitbucketRepository):
+class BitBucketRepository(PolarisBitBucketRepository):
 
     def __init__(self, repository, connector):
         self.repository = repository

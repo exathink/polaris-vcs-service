@@ -13,7 +13,7 @@ from polaris.common.enums import VcsIntegrationTypes
 from polaris.utils.exceptions import ProcessingException
 from polaris.vcs.integrations.gitlab import GitlabRepository
 from polaris.vcs.integrations.github import GithubRepository
-from polaris.vcs.integrations.atlassian import BitbucketRepository
+from polaris.vcs.integrations.atlassian import BitBucketRepository
 from polaris.common import db
 from polaris.repos.db.model import Repository
 from polaris.vcs import connector_factory
@@ -36,7 +36,7 @@ def get_provider_impl(repository_key, join_this=None):
                 elif repository.integration_type == VcsIntegrationTypes.github.value:
                     return GithubRepository.create(repository, connector)
                 elif repository.integration_type == VcsIntegrationTypes.bitbucket.value:
-                    return BitbucketRepository.create(repository, connector)
+                    return BitBucketRepository.create(repository, connector)
                 else:
                     log.info(f'Could not determine repository_implementation for repository_key {repository.key}')
 

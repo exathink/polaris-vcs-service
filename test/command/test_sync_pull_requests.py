@@ -238,13 +238,47 @@ class TestSyncGithubPullRequests:
         assert mapped_pr == expected_mapped_pr
 
 
-class TestSyncBitbucketPullRequests:
+class TestSyncBitBucketPullRequests:
 
-    def it_fetches_latest_updated_pull_requests_from_bitbucket(self, setup_sync_repos):
-        pass
+    def it_fetches_latest_updated_pull_requests_from_bitbucket(self, setup_sync_repos_bitbucket):
+        _, _ = setup_sync_repos_bitbucket
+        repository_key = test_repository_key
 
-    def it_maps_fetched_pull_request_correctly_to_polaris_pr(self, setup_sync_repos):
-        _, _ = setup_sync_repos
+        with patch(
+                'polaris.vcs.integrations.atlassian.BitBucketRepository.fetch_pull_requests_from_source') as fetch_prs:
+            fetch_prs.return_value = [
+                [
+                    dict(
+                        **pull_requests_common_fields
+                    )
+                ]
+            ]
+            for command_output in commands.sync_pull_requests(repository_key):
+                result = command_output
+                assert result['success']
+                prs = result['pull_requests']
+                assert prs[0]['is_new']
+        updated_pull_request = dict(
+            **pull_requests_common_fields
+        )
+        updated_pull_request['source_last_updated'] = datetime.utcnow()
+        with patch(
+                'polaris.vcs.integrations.atlassian.BitBucketRepository.fetch_pull_requests_from_source') as fetch_prs:
+            fetch_prs.return_value = [
+                [
+                    dict(
+                        **updated_pull_request
+                    )
+                ]
+            ]
+            for command_output in commands.sync_pull_requests(repository_key):
+                result = command_output
+                assert result['success']
+                prs = result['pull_requests']
+                assert not prs[0]['is_new']
+
+    def it_maps_fetched_pull_request_correctly_to_polaris_pr(self, setup_sync_repos_bitbucket):
+        _, _ = setup_sync_repos_bitbucket
         repository_key = test_repository_key
         bitbucket_fetched_pr = {
             "description": "",
