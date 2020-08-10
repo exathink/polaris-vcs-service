@@ -238,6 +238,207 @@ class TestSyncGithubPullRequests:
         assert mapped_pr == expected_mapped_pr
 
 
+class TestSyncBitbucketPullRequests:
+
+    def it_fetches_latest_updated_pull_requests_from_bitbucket(self, setup_sync_repos):
+        pass
+
+    def it_maps_fetched_pull_request_correctly_to_polaris_pr(self, setup_sync_repos):
+        _, _ = setup_sync_repos
+        repository_key = test_repository_key
+        bitbucket_fetched_pr = {
+            "description": "",
+            "links": {
+                "decline": {
+                    "href": "https://api.bitbucket.org/2.0/repositories/krishnaku/polaris-bitbucket-test-1/pullrequests/1/decline"
+                },
+                "diffstat": {
+                    "href": "https://api.bitbucket.org/2.0/repositories/krishnaku/polaris-bitbucket-test-1/diffstat/krishnaku/polaris-bitbucket-test-1:de434b82b25c%0D6933bbf37775?from_pullrequest_id=1"
+                },
+                "commits": {
+                    "href": "https://api.bitbucket.org/2.0/repositories/krishnaku/polaris-bitbucket-test-1/pullrequests/1/commits"
+                },
+                "self": {
+                    "href": "https://api.bitbucket.org/2.0/repositories/krishnaku/polaris-bitbucket-test-1/pullrequests/1"
+                },
+                "comments": {
+                    "href": "https://api.bitbucket.org/2.0/repositories/krishnaku/polaris-bitbucket-test-1/pullrequests/1/comments"
+                },
+                "merge": {
+                    "href": "https://api.bitbucket.org/2.0/repositories/krishnaku/polaris-bitbucket-test-1/pullrequests/1/merge"
+                },
+                "html": {
+                    "href": "https://bitbucket.org/krishnaku/polaris-bitbucket-test-1/pull-requests/1"
+                },
+                "activity": {
+                    "href": "https://api.bitbucket.org/2.0/repositories/krishnaku/polaris-bitbucket-test-1/pullrequests/1/activity"
+                },
+                "diff": {
+                    "href": "https://api.bitbucket.org/2.0/repositories/krishnaku/polaris-bitbucket-test-1/diff/krishnaku/polaris-bitbucket-test-1:de434b82b25c%0D6933bbf37775?from_pullrequest_id=1"
+                },
+                "approve": {
+                    "href": "https://api.bitbucket.org/2.0/repositories/krishnaku/polaris-bitbucket-test-1/pullrequests/1/approve"
+                },
+                "statuses": {
+                    "href": "https://api.bitbucket.org/2.0/repositories/krishnaku/polaris-bitbucket-test-1/pullrequests/1/statuses"
+                }
+            },
+            "title": "Test commit 1",
+            "close_source_branch": False,
+            "type": "pullrequest",
+            "id": 1,
+            "destination": {
+                "commit": {
+                    "hash": "6933bbf37775",
+                    "type": "commit",
+                    "links": {
+                        "self": {
+                            "href": "https://api.bitbucket.org/2.0/repositories/krishnaku/polaris-bitbucket-test-1/commit/6933bbf37775"
+                        },
+                        "html": {
+                            "href": "https://bitbucket.org/krishnaku/polaris-bitbucket-test-1/commits/6933bbf37775"
+                        }
+                    }
+                },
+                "repository": {
+                    "links": {
+                        "self": {
+                            "href": "https://api.bitbucket.org/2.0/repositories/krishnaku/polaris-bitbucket-test-1"
+                        },
+                        "html": {
+                            "href": "https://bitbucket.org/krishnaku/polaris-bitbucket-test-1"
+                        },
+                        "avatar": {
+                            "href": "https://bytebucket.org/ravatar/%7B9b9b3553-735b-486a-83fa-f5a404c48a72%7D?ts=default"
+                        }
+                    },
+                    "type": "repository",
+                    "name": "polaris-bitbucket-test-1",
+                    "full_name": "krishnaku/polaris-bitbucket-test-1",
+                    "uuid": "{9b9b3553-735b-486a-83fa-f5a404c48a72}"
+                },
+                "branch": {
+                    "name": "master"
+                }
+            },
+            "created_on": "2020-08-10T09:35:34.475346+00:00",
+            "summary": {
+                "raw": "",
+                "markup": "markdown",
+                "html": "",
+                "type": "rendered"
+            },
+            "source": {
+                "commit": {
+                    "hash": "09eba088adce",
+                    "type": "commit",
+                    "links": {
+                        "self": {
+                            "href": "https://api.bitbucket.org/2.0/repositories/krishnaku/polaris-bitbucket-test-1/commit/09eba088adce"
+                        },
+                        "html": {
+                            "href": "https://bitbucket.org/krishnaku/polaris-bitbucket-test-1/commits/09eba088adce"
+                        }
+                    }
+                },
+                "repository": {
+                    "links": {
+                        "self": {
+                            "href": "https://api.bitbucket.org/2.0/repositories/krishnaku/polaris-bitbucket-test-1"
+                        },
+                        "html": {
+                            "href": "https://bitbucket.org/krishnaku/polaris-bitbucket-test-1"
+                        },
+                        "avatar": {
+                            "href": "https://bytebucket.org/ravatar/%7B9b9b3553-735b-486a-83fa-f5a404c48a72%7D?ts=default"
+                        }
+                    },
+                    "type": "repository",
+                    "name": "polaris-bitbucket-test-1",
+                    "full_name": "krishnaku/polaris-bitbucket-test-1",
+                    "uuid": "{9b9b3553-735b-486a-83fa-f5a404c48a72}"
+                },
+                "branch": {
+                    "name": "test-1"
+                }
+            },
+            "comment_count": 0,
+            "state": "MERGED",
+            "task_count": 0,
+            "reason": "",
+            "updated_on": "2020-08-10T11:57:08.400283+00:00",
+            "author": {
+                "display_name": "Pragya Goyal",
+                "uuid": "{1d53c158-5b57-4613-a45f-1c1b69b34ec1}",
+                "links": {
+                    "self": {
+                        "href": "https://api.bitbucket.org/2.0/users/%7B1d53c158-5b57-4613-a45f-1c1b69b34ec1%7D"
+                    },
+                    "html": {
+                        "href": "https://bitbucket.org/%7B1d53c158-5b57-4613-a45f-1c1b69b34ec1%7D/"
+                    },
+                    "avatar": {
+                        "href": "https://secure.gravatar.com/avatar/f4e5904c494e37510101ac9ce50e7ddf?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FPG-2.png"
+                    }
+                },
+                "nickname": "pragya",
+                "type": "user",
+                "account_id": "5e176e8885a8c90ecaca3c63"
+            },
+            "merge_commit": {
+                "hash": "de434b82b25c",
+                "type": "commit",
+                "links": {
+                    "self": {
+                        "href": "https://api.bitbucket.org/2.0/repositories/krishnaku/polaris-bitbucket-test-1/commit/de434b82b25c"
+                    },
+                    "html": {
+                        "href": "https://bitbucket.org/krishnaku/polaris-bitbucket-test-1/commits/de434b82b25c"
+                    }
+                }
+            },
+            "closed_by": {
+                "display_name": "Pragya Goyal",
+                "uuid": "{1d53c158-5b57-4613-a45f-1c1b69b34ec1}",
+                "links": {
+                    "self": {
+                        "href": "https://api.bitbucket.org/2.0/users/%7B1d53c158-5b57-4613-a45f-1c1b69b34ec1%7D"
+                    },
+                    "html": {
+                        "href": "https://bitbucket.org/%7B1d53c158-5b57-4613-a45f-1c1b69b34ec1%7D/"
+                    },
+                    "avatar": {
+                        "href": "https://secure.gravatar.com/avatar/f4e5904c494e37510101ac9ce50e7ddf?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FPG-2.png"
+                    }
+                },
+                "nickname": "pragya",
+                "type": "user",
+                "account_id": "5e176e8885a8c90ecaca3c63"
+            }
+        }
+
+        expected_mapped_pr = {
+            'source_id': 1,
+            'source_display_id': 1,
+            'title': 'Test commit 1',
+            'description': '',
+            'source_state': 'merged',
+            'state': 'merged',
+            'source_created_at': '2020-08-10T09:35:34.475346+00:00',
+            'source_last_updated': '2020-08-10T11:57:08.400283+00:00',
+            'source_merge_status': 'can_be_merged',
+            'source_merged_at': '2020-08-10T11:57:08.400283+00:00',
+            'source_branch': 'test-1',
+            'target_branch': 'master',
+            'source_repository_source_id': 'polaris-bitbucket-test-1',
+            'target_repository_source_id': 'polaris-bitbucket-test-1',
+            'web_url': 'https://api.bitbucket.org/2.0/repositories/krishnaku/polaris-bitbucket-test-1/pullrequests/1'
+        }
+        repository_provider = repository_factory.get_provider_impl(repository_key)
+        mapped_pr = repository_provider.map_pull_request_info(bitbucket_fetched_pr)
+        assert mapped_pr == expected_mapped_pr
+
+
 class TestSyncPullRequestOtherCases:
 
     # This is a legal test because there are repos in production for which there are no
