@@ -146,8 +146,8 @@ class BitBucketRepository(PolarisBitBucketRepository):
             source_merged_at=pull_request['updated_on'] if (pull_request['merge_commit'] is not None and pull_request['closed_by'] is not None) else None,
             source_branch=pull_request['source']['branch']['name'],
             target_branch=pull_request['destination']['branch']['name'],
-            source_repository_source_id=pull_request['source']['repository']['name'],
-            target_repository_source_id=pull_request['destination']['repository']['name'],
+            source_repository_source_id=pull_request['source']['repository']['uuid'],
+            target_repository_source_id=pull_request['destination']['repository']['uuid'],
             web_url=pull_request['links']['self']['href']
         )
 

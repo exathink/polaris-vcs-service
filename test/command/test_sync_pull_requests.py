@@ -464,8 +464,8 @@ class TestSyncBitBucketPullRequests:
             'source_merged_at': '2020-08-10T11:57:08.400283+00:00',
             'source_branch': 'test-1',
             'target_branch': 'master',
-            'source_repository_source_id': 'polaris-bitbucket-test-1',
-            'target_repository_source_id': 'polaris-bitbucket-test-1',
+            'source_repository_source_id': '{9b9b3553-735b-486a-83fa-f5a404c48a72}',
+            'target_repository_source_id': '{9b9b3553-735b-486a-83fa-f5a404c48a72}',
             'web_url': 'https://api.bitbucket.org/2.0/repositories/krishnaku/polaris-bitbucket-test-1/pullrequests/1'
         }
         repository_provider = repository_factory.get_provider_impl(repository_key)
