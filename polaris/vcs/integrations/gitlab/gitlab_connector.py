@@ -134,7 +134,6 @@ class GitlabRepository(PolarisGitlabRepository):
             locked=GitlabPullRequestState.locked.value
         )
 
-
     def map_pull_request_info(self, pull_request):
         return dict(
             source_id=pull_request['id'],
@@ -147,6 +146,7 @@ class GitlabRepository(PolarisGitlabRepository):
             source_last_updated=pull_request['updated_at'],
             source_merge_status=pull_request['merge_status'],
             source_merged_at=pull_request['merged_at'],
+            source_closed_at=pull_request['closed_at'],
             source_branch=pull_request['source_branch'],
             target_branch=pull_request['target_branch'],
             source_repository_source_id=pull_request['source_project_id'],
