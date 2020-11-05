@@ -99,6 +99,7 @@ class GithubRepository(PolarisGithubRepository):
             # TODO: Figure out how to determine merge status.
             source_merge_status=None,
             source_merged_at=pull_request.merged_at.strftime("%Y-%m-%d %H:%M:%S") if pull_request.merged_at else None,
+            source_closed_at=pull_request.closed_at.strftime("%Y-%m-%d %H:%M:%S") if pull_request.closed_at else None,
             source_branch=pull_request.head.ref,
             target_branch=pull_request.base.ref,
             source_repository_source_id=pull_request.head.repo.id,
