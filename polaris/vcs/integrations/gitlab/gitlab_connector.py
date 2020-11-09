@@ -135,6 +135,12 @@ class GitlabRepository(PolarisGitlabRepository):
         )
 
     def map_pull_request_info(self, pull_request):
+        if pull_request['merged_at'] is not None:
+            pr_end_date = pull_request['merged_at']
+        elif pull_request['closed_at'] is not None:
+            pr_end_date = pull_request['closed_at']
+        else:
+            pr_end_date = None
         return dict(
             source_id=pull_request['id'],
             source_display_id=pull_request['iid'],
@@ -147,6 +153,7 @@ class GitlabRepository(PolarisGitlabRepository):
             source_merge_status=pull_request['merge_status'],
             source_merged_at=pull_request['merged_at'],
             source_closed_at=pull_request['closed_at'],
+            end_date=pr_end_date,
             source_branch=pull_request['source_branch'],
             target_branch=pull_request['target_branch'],
             source_repository_source_id=pull_request['source_project_id'],

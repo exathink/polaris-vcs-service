@@ -95,6 +95,7 @@ def sync_pull_requests(session, repository_key, source_pull_requests):
                     source_merge_status=upsert.excluded.source_merge_status,
                     source_merged_at=upsert.excluded.source_merged_at,
                     source_closed_at=upsert.excluded.source_closed_at,
+                    end_date=upsert.excluded.end_date,
                     deleted_at=upsert.excluded.deleted_at,
                 )
             )
@@ -117,8 +118,7 @@ def sync_pull_requests(session, repository_key, source_pull_requests):
                         source_state=pr.source_state,
                         state=pr.state,
                         merge_status=pr.source_merge_status,
-                        merged_at=pr.source_merged_at,
-                        closed_at=pr.source_closed_at,
+                        end_date=pr.end_date,
                         source_branch=pr.source_branch,
                         target_branch=pr.target_branch,
                         source_id=pr.source_id,
