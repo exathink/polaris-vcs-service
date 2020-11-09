@@ -73,14 +73,14 @@ class TestSyncGitlabPullRequests:
                 "web_url": "https://gitlab.com/krishnaku"
             },
             "merged_at": "2020-06-11T18:57:08.818Z",
-            "closed_by": "None",
-            "closed_at": "None",
+            "closed_by": None,
+            "closed_at": None,
             "target_branch": "master",
             "source_branch": "PO-178",
             "user_notes_count": 0,
             "upvotes": 0,
             "downvotes": 0,
-            "assignee": "None",
+            "assignee": None,
             "author": {
                 "id": 1438125,
                 "name": "Krishna Kumar",
@@ -98,14 +98,14 @@ class TestSyncGitlabPullRequests:
 
             ],
             "work_in_progress": False,
-            "milestone": "None",
+            "milestone": None,
             "merge_when_pipeline_succeeds": False,
             "merge_status": "can_be_merged",
             "sha": "22e505fd9ea218f35bee717d479827101a129af5",
             "merge_commit_sha": "44991b241b824f8cbcb6683edbb55840e9d2a604",
-            "squash_commit_sha": "None",
-            "discussion_locked": "None",
-            "should_remove_source_branch": "None",
+            "squash_commit_sha": None,
+            "discussion_locked": None,
+            "should_remove_source_branch": None,
             "force_remove_source_branch": False,
             "reference": "!69",
             "references": {
@@ -117,8 +117,8 @@ class TestSyncGitlabPullRequests:
             "time_stats": {
                 "time_estimate": 0,
                 "total_time_spent": 0,
-                "human_time_estimate": "None",
-                "human_total_time_spent": "None"
+                "human_time_estimate": None,
+                "human_total_time_spent": None
             },
             "squash": False,
             "task_completion_status": {
@@ -127,7 +127,7 @@ class TestSyncGitlabPullRequests:
             },
             "has_conflicts": False,
             "blocking_discussions_resolved": True,
-            "approvals_before_merge": "None"
+            "approvals_before_merge": None
         }
         expected_mapped_pr = {
             'source_id': 61296045,
@@ -140,6 +140,8 @@ class TestSyncGitlabPullRequests:
             'source_last_updated': '2020-06-11T18:57:08.777Z',
             'source_merge_status': 'can_be_merged',
             'source_merged_at': '2020-06-11T18:57:08.818Z',
+            'source_closed_at':None,
+            'end_date': '2020-06-11T18:57:08.818Z',
             'source_branch': 'PO-178',
             'target_branch': 'master',
             'source_repository_source_id': 5419303,
@@ -211,6 +213,7 @@ class TestSyncGithubPullRequests:
             created_at=datetime(2020, 7, 28, 13, 26, 8),
             updated_at=datetime(2020, 7, 28, 13, 26, 8),
             merged_at=None,
+            closed_at=None,
             head=dict(ref='pr_test', repo=dict(id=195584868)),
             base=dict(ref='master', repo=dict(id=195584868)),
             url="https://api.github.com/repos/exathink/urjuna-test1/pulls/5"
@@ -227,6 +230,8 @@ class TestSyncGithubPullRequests:
               "source_last_updated":"2020-07-28 13:26:08",
               "source_merge_status":None,
               "source_merged_at":None,
+              "source_closed_at":None,
+              "end_date":None,
               "source_branch":"pr_test",
               "target_branch":"master",
               "source_repository_source_id":195584868,
@@ -448,7 +453,8 @@ class TestSyncBitBucketPullRequests:
                 "nickname": "pragya",
                 "type": "user",
                 "account_id": "5e176e8885a8c90ecaca3c63"
-            }
+            },
+            "closed_at": None
         }
 
         expected_mapped_pr = {
@@ -462,6 +468,8 @@ class TestSyncBitBucketPullRequests:
             'source_last_updated': '2020-08-10T11:57:08.400283+00:00',
             'source_merge_status': 'can_be_merged',
             'source_merged_at': '2020-08-10T11:57:08.400283+00:00',
+            'source_closed_at': None,
+            'end_date': '2020-08-10T11:57:08.400283+00:00',
             'source_branch': 'test-1',
             'target_branch': 'master',
             'source_repository_source_id': '{9b9b3553-735b-486a-83fa-f5a404c48a72}',

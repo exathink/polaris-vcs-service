@@ -15,7 +15,6 @@ from polaris.integrations.atlassian_connect import BitBucketBaseConnector
 from polaris.utils.exceptions import ProcessingException
 from polaris.common.enums import BitbucketPullRequestState
 
-
 log = logging.getLogger('polaris.vcs.bitbucket_connector')
 
 
@@ -71,7 +70,7 @@ class BitBucketConnector(BitBucketBaseConnector):
             else:
                 log.error(
                     f'Bitbucket Fetch repositories failed: '
-                    f'{self.connector.name }: {fetch_repos_url} {response.text} ({response.status_code})'
+                    f'{self.connector.name}: {fetch_repos_url} {response.text} ({response.status_code})'
                 )
                 raise ProcessingException(
                     f'Bitbucket Fetch repositories failed: '
@@ -132,6 +131,13 @@ class BitBucketRepository(PolarisBitBucketRepository):
         self.connector = connector
 
     def map_pull_request_info(self, pull_request):
+        # TODO: Validate if merge_commit is the right attribute to identify merge status \
+        #  Also validate closed date vs merged date
+        source_merged_at = pull_request['updated_on'] if (
+                    pull_request['merge_commit'] is not None and pull_request['closed_by'] is not None) else None
+        source_closed_at = pull_request['updated_on'] if (
+                    pull_request['state'].lower() == 'declined' and pull_request['closed_by'] is not None) else None
+        end_date = source_merged_at if source_merged_at is not None else source_closed_at
         return dict(
             source_id=pull_request['id'],
             source_display_id=pull_request['id'],
@@ -141,9 +147,10 @@ class BitBucketRepository(PolarisBitBucketRepository):
             state=self.state_mapping[pull_request['state'].lower()],
             source_created_at=pull_request['created_on'],
             source_last_updated=pull_request['updated_on'],
-            # TODO: Validate if merge_commit is the right attribute to identify merge status
             source_merge_status='can_be_merged' if pull_request['merge_commit'] is not None else None,
-            source_merged_at=pull_request['updated_on'] if (pull_request['merge_commit'] is not None and pull_request['closed_by'] is not None) else None,
+            source_merged_at=source_merged_at,
+            source_closed_at=source_closed_at,
+            end_date=end_date,
             source_branch=pull_request['source']['branch']['name'],
             target_branch=pull_request['destination']['branch']['name'],
             source_repository_source_id=pull_request['source']['repository']['uuid'],
