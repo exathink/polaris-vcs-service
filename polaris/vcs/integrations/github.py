@@ -111,7 +111,7 @@ class GithubRepository(PolarisGithubRepository):
             target_branch=pull_request.base.ref,
             source_repository_source_id=pull_request.head.repo.id,
             target_repository_source_id=pull_request.base.repo.id,
-            web_url=pull_request.url
+            web_url=pull_request.html_url
         )
 
     def fetch_pull_requests_from_source(self):

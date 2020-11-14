@@ -9,8 +9,9 @@
 # Author: Pragya Goyal
 
 from unittest.mock import patch
-from ..shared_fixtures import *
+
 from polaris.vcs import commands, repository_factory
+from ..shared_fixtures import *
 
 
 class TestSyncGitlabPullRequests:
@@ -216,28 +217,28 @@ class TestSyncGithubPullRequests:
             closed_at=None,
             head=dict(ref='pr_test', repo=dict(id=195584868)),
             base=dict(ref='master', repo=dict(id=195584868)),
-            url="https://api.github.com/repos/exathink/urjuna-test1/pulls/5"
+            html_url="https://github.com/exathink/urjuna-test1/pulls/5"
         )
         github_fetched_pr = DictToObj(github_fetched_pr_dict)
         expected_mapped_pr = {
-              "source_id":457807963,
-              "source_display_id":5,
-              "title":"Create pull_requests.txt",
-              "description":"",
-              "source_state":"open",
-              "state":"open",
-              "source_created_at":"2020-07-28 13:26:08",
-              "source_last_updated":"2020-07-28 13:26:08",
-              "source_merge_status":None,
-              "source_merged_at":None,
-              "source_closed_at":None,
-              "end_date":None,
-              "source_branch":"pr_test",
-              "target_branch":"master",
-              "source_repository_source_id":195584868,
-              "target_repository_source_id":195584868,
-              "web_url":"https://api.github.com/repos/exathink/urjuna-test1/pulls/5"
-           }
+            "source_id": 457807963,
+            "source_display_id": 5,
+            "title": "Create pull_requests.txt",
+            "description": "",
+            "source_state": "open",
+            "state": "open",
+            "source_created_at": "2020-07-28 13:26:08",
+            "source_last_updated": "2020-07-28 13:26:08",
+            "source_merge_status": None,
+            "source_merged_at": None,
+            "source_closed_at": None,
+            "end_date": None,
+            "source_branch": "pr_test",
+            "target_branch": "master",
+            "source_repository_source_id": 195584868,
+            "target_repository_source_id": 195584868,
+            "web_url": "https://github.com/exathink/urjuna-test1/pulls/5"
+        }
         repository_provider = repository_factory.get_provider_impl(repository_key)
         mapped_pr = repository_provider.map_pull_request_info(github_fetched_pr)
         assert mapped_pr == expected_mapped_pr
