@@ -12,7 +12,7 @@ import logging
 
 from polaris.messaging.topics import TopicSubscriber, VcsTopic
 from polaris.vcs.messaging.messages import AtlassianConnectRepositoryEvent, GitlabRepositoryEvent, \
-    RemoteRepositoryPushEvent
+    RemoteRepositoryPushEvent, GitlabPullRequestEvent
 from polaris.messaging.utils import raise_message_processing_error
 from polaris.vcs import commands
 from polaris.vcs.integrations.atlassian import bitbucket_message_handler
@@ -42,6 +42,8 @@ class VcsTopicSubscriber(TopicSubscriber):
             return self.process_gitlab_repository_event(message)
         elif RemoteRepositoryPushEvent.message_type == message.message_type:
             return self.process_remote_repository_push_event(message)
+        elif GitlabPullRequestEvent.message_type == message.message_type:
+            return self.process_gitlab_pull_request_event(message)
 
     @staticmethod
     def process_atlassian_connect_repository_event(message):
@@ -92,3 +94,10 @@ class VcsTopicSubscriber(TopicSubscriber):
             return commands.handle_remote_repository_push(connector_key, repository_source_id)
         except Exception as exc:
             raise_message_processing_error(message, 'Failed to process repository push event', str(exc))
+
+    @staticmethod
+    def process_gitlab_pull_request_event(message):
+        connector_key = message['connector_key']
+        logger.info(
+            f"Processing  pull request push event for connector {connector_key} "
+        )

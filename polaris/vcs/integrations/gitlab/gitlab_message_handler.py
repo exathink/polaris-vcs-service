@@ -16,6 +16,8 @@ from polaris.vcs.messaging import publish
 def handle_gitlab_event(connector_key, event_type, payload, channel=None):
     if event_type == 'repository:push':
         return handle_gitlab_repository_push(connector_key, payload, channel)
+    if event_type == 'pull_request:push':
+        return handle_gitlab_pull_request_push(connector_key, payload, channel)
 
 
 def handle_gitlab_repository_push(connector_key, payload, channel=None):
@@ -23,3 +25,11 @@ def handle_gitlab_repository_push(connector_key, payload, channel=None):
     repo_source_id = event.get('project_id')
 
     publish.remote_repository_push_event(connector_key, repo_source_id, channel)
+
+
+def handle_gitlab_pull_request_push(connector_key, payload, channel=None):
+    event = json.loads(payload)
+    repo_source_id = event.get('project_id')
+
+    publish.gitlab_pull_request_event(connector_key, repo_source_id, payload, channel)
+
