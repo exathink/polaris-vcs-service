@@ -14,7 +14,6 @@ from datetime import datetime, timedelta
 from polaris.integrations.gitlab import GitlabConnector
 from polaris.utils.exceptions import ProcessingException
 from polaris.utils.config import get_config_provider
-from .gitlab_webhooks import webhook_paths
 from polaris.common.enums import VcsIntegrationTypes, GitlabPullRequestState
 
 config_provider = get_config_provider()
@@ -46,10 +45,11 @@ class GitlabRepositoriesConnector(GitlabConnector):
             ),
         )
 
+    # Deprecated
     def register_repository_push_hook(self, repository):
         repo_source_id = repository['source_id']
         repository_push_callback_url = f"{config_provider.get('GITLAB_WEBHOOKS_BASE_URL')}" \
-                                       f"{webhook_paths['repository:push']}/{self.key}"
+                                       f"/repository/push/{self.key}"
 
         add_hook_url = f"{self.base_url}/projects/{repo_source_id}/hooks"
 
@@ -77,6 +77,45 @@ class GitlabRepositoriesConnector(GitlabConnector):
         else:
             raise ProcessingException(
                 f"Failed to register repository:push webhook for repository {repository['name']} ({repo_source_id})"
+                f'{response.status_code} {response.text}'
+            )
+
+    def register_repository_webhooks(self, repository):
+        repo_source_id = repository['source_id']
+        repository_webhooks_callback_url = f"{config_provider.get('GITLAB_WEBHOOKS_BASE_URL')}" \
+                                          f"/repository/webhooks/{self.key}"
+
+        add_hook_url = f"{self.base_url}/projects/{repo_source_id}/hooks"
+
+        response = requests.post(
+            add_hook_url,
+            headers={"Authorization": f"Bearer {self.personal_access_token}"},
+            data=dict(
+                id=repo_source_id,
+                url=repository_webhooks_callback_url,
+                push_events=True,
+                merge_requests_events=True,
+                enable_ssl_verification=True,
+                token=self.webhook_secret
+            )
+        )
+        if response.ok:
+            result = response.json()
+            return dict(
+                webhooks=dict(
+                    repository_push=dict(
+                        source_hook_id=result['id'],
+                        created_at=result['created_at']
+                    ),
+                    merge_requests=dict(
+                        source_hook_id=result['id'],
+                        created_at=result['created_at']
+                    )
+                )
+            )
+        else:
+            raise ProcessingException(
+                f"Failed to register repository webhooks for repository {repository['name']} ({repo_source_id})"
                 f'{response.status_code} {response.text}'
             )
 

@@ -8,6 +8,7 @@
 
 # Author: Krishna Kumar
 
+import json
 import logging
 
 from polaris.messaging.topics import TopicSubscriber, VcsTopic
@@ -29,7 +30,8 @@ class VcsTopicSubscriber(TopicSubscriber):
             message_classes=[
                 AtlassianConnectRepositoryEvent,
                 GitlabRepositoryEvent,
-                RemoteRepositoryPushEvent
+                RemoteRepositoryPushEvent,
+                GitlabPullRequestEvent
             ],
             publisher=publisher,
             exclusive=False
@@ -98,6 +100,14 @@ class VcsTopicSubscriber(TopicSubscriber):
     @staticmethod
     def process_gitlab_pull_request_event(message):
         connector_key = message['connector_key']
+        #repository_source_id = message['repository_source_id']
+        pull_request_event = json.loads(message['payload'])
+
         logger.info(
-            f"Processing  pull request push event for connector {connector_key} "
+            f"Processing pull request push event for connector {connector_key} "
         )
+        try:
+            pull_request = gitlab_message_handler.handle_gitlab_pull_request_event(connector_key, pull_request_event)
+
+        except Exception as exc:
+            raise_message_processing_error(message, 'Failed to process repository push event', str(exc))

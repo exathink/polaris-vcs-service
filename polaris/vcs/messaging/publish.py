@@ -88,11 +88,10 @@ def remote_repository_push_event(connector_key, repository_source_id, channel=No
     return message
 
 
-def gitlab_pull_request_event(connector_key, repo_source_id, payload, channel=None):
+def gitlab_pull_request_event(connector_key, payload, channel=None):
     message = GitlabPullRequestEvent(
         send=dict(
             connector_key=connector_key,
-            repo_source_id=repo_source_id,
             payload=payload
         )
     )

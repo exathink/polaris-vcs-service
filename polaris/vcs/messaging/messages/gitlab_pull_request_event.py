@@ -18,7 +18,7 @@ class GitlabPullRequestEvent(Message):
     message_type = 'vcs.gitlab_pull_request_event'
 
     connector_key = fields.String(required=True)
-    repo_source_id = fields.String(required=True)
+    #repo_source_id = fields.String(required=True)
 
     payload = fields.String(required=True)
 
