@@ -13,7 +13,7 @@ import logging
 from datetime import datetime
 from polaris.repos.db.model import Repository, pull_requests, repositories
 from polaris.common import db
-from sqlalchemy import select, and_, Column, Integer
+from sqlalchemy import select, and_, or_, Column, Integer
 from sqlalchemy.dialects.postgresql import insert
 
 log = logging.getLogger('polaris.vcs.db.impl.pull_requests')
@@ -60,7 +60,7 @@ def sync_pull_requests(session, repository_key, source_pull_requests):
             )
         )
 
-        pull_requests_before_insert = session.connection().execute(
+        new_and_updated_pull_requests = session.connection().execute(
             select([*pull_requests_temp.columns, pull_requests.c.key.label('current_key'), \
                     repositories.c.key.label('source_repository_key')]).select_from(
                 pull_requests_temp.outerjoin(
@@ -72,13 +72,24 @@ def sync_pull_requests(session, repository_key, source_pull_requests):
                 ).join(
                     repositories, pull_requests_temp.c.source_repository_id == repositories.c.id
                 )
+            ).where(
+                or_(
+                    pull_requests_temp.c.source_last_updated > pull_requests.c.source_last_updated,
+                    pull_requests.c.key == None
+                )
             )
         ).fetchall()
 
         # Update pull_requests
-        upsert = insert(pull_requests).from_select(
+        upsert = insert(
+            pull_requests
+        ).from_select(
             [column.name for column in pull_requests_temp.columns],
-            select([pull_requests_temp]).where(pull_requests_temp.c.key != None)
+            select(
+                [pull_requests_temp]
+            ).where(
+                    pull_requests_temp.c.key != None,
+            )
         )
 
         session.connection().execute(
@@ -103,8 +114,8 @@ def sync_pull_requests(session, repository_key, source_pull_requests):
 
         synced_pull_requests = []
         # NOTE: Had to check for None, as in the case when there are no fetched PRs,
-        # pull_requests_before_insert has entries with all None values
-        for pr in pull_requests_before_insert:
+        # new_and_updated_pull_request has entries with all None values
+        for pr in new_and_updated_pull_requests:
             if pr.source_id is not None:
                 synced_pull_requests.append(
                     dict(
