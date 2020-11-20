@@ -60,7 +60,7 @@ def sync_pull_requests(session, repository_key, source_pull_requests):
             )
         )
 
-        pull_requests_before_insert = session.connection().execute(
+        new_and_updated_pull_requests = session.connection().execute(
             select([*pull_requests_temp.columns, pull_requests.c.key.label('current_key'), \
                     repositories.c.key.label('source_repository_key')]).select_from(
                 pull_requests_temp.outerjoin(
@@ -114,8 +114,8 @@ def sync_pull_requests(session, repository_key, source_pull_requests):
 
         synced_pull_requests = []
         # NOTE: Had to check for None, as in the case when there are no fetched PRs,
-        # pull_requests_before_insert has entries with all None values
-        for pr in pull_requests_before_insert:
+        # new_and_updated_pull_request has entries with all None values
+        for pr in new_and_updated_pull_requests:
             if pr.source_id is not None:
                 synced_pull_requests.append(
                     dict(
