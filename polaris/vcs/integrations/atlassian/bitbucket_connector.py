@@ -155,7 +155,7 @@ class BitBucketRepository(PolarisBitBucketRepository):
             target_branch=pull_request['destination']['branch']['name'],
             source_repository_source_id=pull_request['source']['repository']['uuid'],
             target_repository_source_id=pull_request['destination']['repository']['uuid'],
-            web_url=pull_request['links']['self']['href']
+            web_url=pull_request['links']['html']['href']
         )
 
     def fetch_pull_requests(self):
