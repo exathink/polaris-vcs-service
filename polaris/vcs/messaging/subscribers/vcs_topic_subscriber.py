@@ -111,3 +111,35 @@ class VcsTopicSubscriber(TopicSubscriber):
 
         except Exception as exc:
             raise_message_processing_error(message, 'Failed to process repository push event', str(exc))
+
+    def publish_sync_pull_request_responses(self, message, synced_pull_requests, created_messages, updated_messages):
+        organization_key = message['organization_key']
+        repository_key = message['repository_key']
+        created = []
+        updated = []
+        for pr in synced_pull_requests:
+            if pr['is_new']:
+                created.append(pr)
+            else:
+                updated.append(pr)
+        if len(created) > 0:
+            created_message = PullRequestsCreated(
+                send=dict(
+                    organization_key=organization_key,
+                    repository_key=repository_key,
+                    pull_request_summaries=created
+                )
+            )
+            self.publish(VcsTopic, created_message)
+            created_messages.append(created_message)
+        if len(updated) > 0:
+            updated_message = PullRequestsUpdated(
+                send=dict(
+                    organization_key=organization_key,
+                    repository_key=repository_key,
+                    pull_request_summaries=updated
+                )
+            )
+
+            self.publish(VcsTopic, updated_message)
+            updated_messages.append(updated_message)

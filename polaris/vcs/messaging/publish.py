@@ -7,11 +7,11 @@
 # confidential.
 
 # Author: Krishna Kumar
-from polaris.messaging.messages import RepositoriesImported
+from polaris.messaging.messages import RepositoriesImported, PullRequestsUpdated, PullRequestsCreated
 from polaris.vcs.messaging.messages import RefreshConnectorRepositories, AtlassianConnectRepositoryEvent, \
     GitlabRepositoryEvent, RemoteRepositoryPushEvent, GitlabPullRequestEvent
 from polaris.messaging.utils import publish
-from polaris.messaging.topics import ConnectorsTopic, VcsTopic
+from polaris.messaging.topics import ConnectorsTopic, VcsTopic, AnalyticsTopic
 from polaris.integrations.publish import connector_event
 
 
@@ -101,3 +101,33 @@ def gitlab_pull_request_event(connector_key, payload, channel=None):
         channel=channel
     )
     return message
+
+
+def pull_request_created_event(organization_key, repository_key, pull_request_summaries, channel=None):
+    message = PullRequestsCreated(
+        send=dict(
+            organization_key=organization_key,
+            repository_key=repository_key,
+            pull_request_summaries=pull_request_summaries
+        )
+    )
+    publish(
+        AnalyticsTopic,
+        message,
+        channel=channel
+    )
+
+
+def pull_request_updated_event(organization_key, repository_key, pull_request_summaries, channel=None):
+    message = PullRequestsUpdated(
+        send=dict(
+            organization_key=organization_key,
+            repository_key=repository_key,
+            pull_request_summaries=pull_request_summaries
+        )
+    )
+    publish(
+        AnalyticsTopic,
+        message,
+        channel=channel
+    )
