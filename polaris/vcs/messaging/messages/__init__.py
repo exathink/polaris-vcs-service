@@ -14,14 +14,12 @@ from .refresh_connector_repositories import RefreshConnectorRepositories
 from .atlassian_connect_repository_event import AtlassianConnectRepositoryEvent
 from .gitlab_repository_event import GitlabRepositoryEvent
 from .repository_push_event import RemoteRepositoryPushEvent
-from .gitlab_pull_request_event import GitlabPullRequestEvent
 
 # Add this to the global message factory so that the messages can be desrialized on reciept.
 register_messages([
     RemoteRepositoryPushEvent,
     GitlabRepositoryEvent,
     AtlassianConnectRepositoryEvent,
-    RefreshConnectorRepositories,
-    GitlabPullRequestEvent
+    RefreshConnectorRepositories
 ])
 
