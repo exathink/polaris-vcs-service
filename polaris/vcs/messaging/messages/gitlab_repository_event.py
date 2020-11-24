@@ -21,6 +21,3 @@ class GitlabRepositoryEvent(Message):
     event_type = fields.String(required=True)
 
     payload = fields.String(required=True)
-
-
-

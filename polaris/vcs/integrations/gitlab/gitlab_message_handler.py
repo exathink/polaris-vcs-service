@@ -59,6 +59,7 @@ def handle_gitlab_pull_request_event(connector_key, payload, channel=None):
                                 repository_key=source_repo.key,
                                 pull_request_summaries=synced_prs
                             )
+                    return synced_prs
 
 
 def handle_gitlab_event(connector_key, event_type, payload, channel=None):
