@@ -17,19 +17,18 @@ logger = logging.getLogger('polaris.vcs.integrations.gitlab.webhook')
 webhook = Blueprint('gitlab_webhooks', __name__)
 
 
-# This method is deprecated and works only for repository push events
 @webhook.route(f"/repository/push/<connector_key>/", methods=('GET', 'POST'))
 def repository_push(connector_key):
-    logger.info('Received webhook: repository push')
+    logger.info('Received webhook event @repository/push')
 
-    if request.json['object_kind'] == 'push':
-        publish.gitlab_repository_event('push', connector_key, request.data)
+    event_type = request.json['object_kind']
+    publish.gitlab_repository_event(event_type, connector_key, request.data)
     return ''
 
 
 @webhook.route(f"/repository/webhooks/<connector_key>/", methods=('GET', 'POST'))
 def repository_webhook(connector_key):
-    logger.info('Received webhook event')
+    logger.info('Received webhook event @repository/webhooks')
 
     event_type = request.json['object_kind']
     publish.gitlab_repository_event(event_type, connector_key, request.data)

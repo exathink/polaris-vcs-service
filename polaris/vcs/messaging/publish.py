@@ -9,9 +9,9 @@
 # Author: Krishna Kumar
 from polaris.messaging.messages import RepositoriesImported, PullRequestsUpdated, PullRequestsCreated
 from polaris.vcs.messaging.messages import RefreshConnectorRepositories, AtlassianConnectRepositoryEvent, \
-    GitlabRepositoryEvent, RemoteRepositoryPushEvent, GitlabPullRequestEvent
+    GitlabRepositoryEvent, RemoteRepositoryPushEvent
 from polaris.messaging.utils import publish
-from polaris.messaging.topics import ConnectorsTopic, VcsTopic, AnalyticsTopic
+from polaris.messaging.topics import ConnectorsTopic, VcsTopic
 from polaris.integrations.publish import connector_event
 
 
@@ -88,21 +88,6 @@ def remote_repository_push_event(connector_key, repository_source_id, channel=No
     return message
 
 
-def gitlab_pull_request_event(connector_key, payload, channel=None):
-    message = GitlabPullRequestEvent(
-        send=dict(
-            connector_key=connector_key,
-            payload=payload
-        )
-    )
-    publish(
-        VcsTopic,
-        message,
-        channel=channel
-    )
-    return message
-
-
 def pull_request_created_event(organization_key, repository_key, pull_request_summaries, channel=None):
     message = PullRequestsCreated(
         send=dict(
@@ -112,7 +97,7 @@ def pull_request_created_event(organization_key, repository_key, pull_request_su
         )
     )
     publish(
-        AnalyticsTopic,
+        VcsTopic,
         message,
         channel=channel
     )
@@ -127,7 +112,7 @@ def pull_request_updated_event(organization_key, repository_key, pull_request_su
         )
     )
     publish(
-        AnalyticsTopic,
+        VcsTopic,
         message,
         channel=channel
     )
