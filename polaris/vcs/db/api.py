@@ -46,10 +46,10 @@ def sync_pull_requests(repository_key, source_pull_requests):
         return db.failure_message('Import Pull Requests', e)
 
 
-def register_webhook(organization_key, repository_key, webhook_info):
+def register_webhooks(repository_key, webhook_info, join_this=None):
     try:
-        with db.orm_session() as session:
-            return repositories.register_webhook(session, organization_key, repository_key, webhook_info)
+        with db.orm_session(join_this) as session:
+            return repositories.register_webhooks(session, repository_key, webhook_info)
     except SQLAlchemyError as exc:
         return db.process_exception("Register Webhook", exc)
     except Exception as e:

@@ -169,5 +169,5 @@ class RegisterRepositoriesConnectorWebhooks(graphene.Mutation):
         logger.info(f'Register webhooks called for connector: {connector_key}')
         with db.orm_session() as session:
             return RegisterRepositoriesConnectorWebhooks(
-                success=commands.register_repositories_webhooks(connector_key, repository_keys, webhooks_events, join_this=session)
+                success=commands.register_repository_webhooks(connector_key, repository_keys, webhooks_events, join_this=session)
             )

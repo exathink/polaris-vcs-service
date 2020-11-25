@@ -45,42 +45,41 @@ class GitlabRepositoriesConnector(GitlabConnector):
             ),
         )
 
-    def register_repository_webhooks(self, repository):
-        repo_source_id = repository['source_id']
+    def register_repository_webhooks(self, repo_source_id, webhook_events):
         repository_webhooks_callback_url = f"{config_provider.get('GITLAB_WEBHOOKS_BASE_URL')}" \
                                           f"/repository/webhooks/{self.key}"
 
         add_hook_url = f"{self.base_url}/projects/{repo_source_id}/hooks"
 
+        post_data = dict(
+            id=repo_source_id,
+            url=repository_webhooks_callback_url,
+            push_events=True,
+            merge_requests_events=True,
+            enable_ssl_verification=True,
+            token=self.webhook_secret
+        )
+        for event in webhook_events:
+            # TODO: Create an enum for gitlab events
+            post_data[f'{event}'] = True
+
         response = requests.post(
             add_hook_url,
             headers={"Authorization": f"Bearer {self.personal_access_token}"},
-            data=dict(
-                id=repo_source_id,
-                url=repository_webhooks_callback_url,
-                push_events=True,
-                merge_requests_events=True,
-                enable_ssl_verification=True,
-                token=self.webhook_secret
-            )
+            data=post_data
         )
         if response.ok:
             result = response.json()
             return dict(
                 webhooks=dict(
-                    repository_push=dict(
-                        source_hook_id=result['id'],
-                        created_at=result['created_at']
-                    ),
-                    merge_requests=dict(
-                        source_hook_id=result['id'],
-                        created_at=result['created_at']
-                    )
+                    source_hook_id=result['id'],
+                    created_at=result['created_at'],
+                    registered_events=webhook_events
                 )
             )
         else:
             raise ProcessingException(
-                f"Failed to register repository webhooks for repository {repository['name']} ({repo_source_id})"
+                f"Failed to register repository webhooks for repository with source id: ({repo_source_id})"
                 f'{response.status_code} {response.text}'
             )
 

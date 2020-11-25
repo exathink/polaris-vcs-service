@@ -16,6 +16,7 @@ from polaris.integrations.db.api import tracking_receipt_updates
 from polaris.vcs.db import api
 from polaris.vcs.messaging import publish
 from polaris.utils.exceptions import ProcessingException
+from polaris.repos.db.model import Repository
 
 log = logging.getLogger('polaris.vcs.service.commands')
 
@@ -49,29 +50,18 @@ def sync_pull_requests(repository_key):
         return []
 
 
-def register_repository_webhooks(organization_key, connector_key, repository_summaries):
-    connector = connector_factory.get_connector(connector_key=connector_key)
-    if connector and getattr(connector, 'register_repository_webhooks', None):
-        for repo in repository_summaries:
-            try:
-                webhook_info = connector.register_repository_webhooks(repo)
-                api.register_webhook(organization_key, repo['key'], webhook_info)
-            except ProcessingException as e:
-                log.error(e)
-
-
-def register_repositories_webhooks(connector_key, repository_keys, webhook_events, join_this=None):
-    connector = connector_factory.get_connector(connector_key=connector_key)
-    # TODO:
-    # Check if webhooks are already registered. If not call register method in connector
-    # If registered delete and re-register
-    # Add a delete method in connector
-    if connector and getattr(connector, 'register_repository_webhooks', None):
-        for repo_key in repository_keys:
-            try:
-                return True
-            except ProcessingException as e:
-                log.error(e)
+def register_repository_webhooks(connector_key, repository_keys, webhook_events, join_this=None):
+    with db.orm_session(join_this) as session:
+        connector = connector_factory.get_connector(connector_key=connector_key, join_this=session)
+        if connector and getattr(connector, 'register_repository_webhooks', None):
+            for repository_key in repository_keys:
+                repo = Repository.find_by_repository_key(session, repository_key=repository_key)
+                if repo:
+                    try:
+                        webhook_info = connector.register_repository_webhooks(repo.source_id, webhook_events)
+                        api.register_webhooks(repository_key, webhook_info, join_this=session)
+                    except ProcessingException as e:
+                        log.error(e)
 
 
 def import_repositories(organization_key, connector_key, repository_keys):
@@ -99,4 +89,3 @@ def test_vcs_connector(connector_key, join_this=None):
         )
         if vcs_connector:
             return vcs_connector.test()
-
