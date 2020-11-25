@@ -60,6 +60,20 @@ def register_repository_webhooks(organization_key, connector_key, repository_sum
                 log.error(e)
 
 
+def register_repositories_webhooks(connector_key, repository_keys, webhook_events, join_this=None):
+    connector = connector_factory.get_connector(connector_key=connector_key)
+    # TODO:
+    # Check if webhooks are already registered. If not call register method in connector
+    # If registered delete and re-register
+    # Add a delete method in connector
+    if connector and getattr(connector, 'register_repository_webhooks', None):
+        for repo_key in repository_keys:
+            try:
+                return True
+            except ProcessingException as e:
+                log.error(e)
+
+
 def import_repositories(organization_key, connector_key, repository_keys):
     with db.orm_session():
         result = api.import_repositories(organization_key, repository_keys)
@@ -85,3 +99,4 @@ def test_vcs_connector(connector_key, join_this=None):
         )
         if vcs_connector:
             return vcs_connector.test()
+

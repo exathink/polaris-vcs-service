@@ -13,7 +13,8 @@ import graphene
 from polaris.integrations.graphql import IntegrationsQueryMixin, IntegrationsMutationsMixin
 from polaris.graphql.interfaces import NamedNode
 
-from .mutations import RefreshConnectorRepositories, ImportRepositories, TestVcsConnector, CreateVcsConnector, EditVcsConnector
+from .mutations import RefreshConnectorRepositories, ImportRepositories, TestVcsConnector, CreateVcsConnector, \
+    EditVcsConnector, RegisterRepositoriesConnectorWebhooks
 from .repository import Repository
 from .vcs_connector import VcsConnector
 
@@ -43,6 +44,7 @@ class Mutation(
     create_connector = CreateVcsConnector.Field()
     edit_connector = EditVcsConnector.Field()
     test_connector = TestVcsConnector.Field()
+    register_repositories_connector_webhooks = RegisterRepositoriesConnectorWebhooks.Field()
 
 
 schema = graphene.Schema(query=Query, mutation=Mutation)

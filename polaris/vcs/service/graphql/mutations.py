@@ -147,3 +147,27 @@ class EditVcsConnector(EditConnector):
                 return resolved
             else:
                 raise ProcessingException("Could not update connector: Connector test failed")
+
+
+class RegisterWebhooksInput(graphene.InputObjectType):
+    connector_key = graphene.String(required=True)
+    repository_keys = graphene.List(graphene.String, required=True)
+    webhook_events = graphene.List(graphene.String, required=True)
+
+
+class RegisterRepositoriesConnectorWebhooks(graphene.Mutation):
+    class Arguments:
+        register_webhooks_input = RegisterWebhooksInput(required=True)
+
+    success = graphene.Boolean()
+
+    def mutate(self, info, register_webhooks_input):
+        connector_key = register_webhooks_input.connector_key
+        repository_keys = register_webhooks_input.repository_keys
+        webhooks_events = register_webhooks_input.webhook_events
+
+        logger.info(f'Register webhooks called for connector: {connector_key}')
+        with db.orm_session() as session:
+            return RegisterRepositoriesConnectorWebhooks(
+                success=commands.register_repositories_webhooks(connector_key, repository_keys, webhooks_events, join_this=session)
+            )
