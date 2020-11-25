@@ -49,12 +49,12 @@ def sync_pull_requests(repository_key):
         return []
 
 
-def register_repository_push_webhooks(organization_key, connector_key, repository_summaries):
+def register_repository_webhooks(organization_key, connector_key, repository_summaries):
     connector = connector_factory.get_connector(connector_key=connector_key)
-    if connector and getattr(connector, 'register_repository_push_hook', None):
+    if connector and getattr(connector, 'register_repository_webhooks', None):
         for repo in repository_summaries:
             try:
-                webhook_info = connector.register_repository_push_hook(repo)
+                webhook_info = connector.register_repository_webhooks(repo)
                 api.register_webhook(organization_key, repo['key'], webhook_info)
             except ProcessingException as e:
                 log.error(e)
@@ -65,7 +65,7 @@ def import_repositories(organization_key, connector_key, repository_keys):
         result = api.import_repositories(organization_key, repository_keys)
         if result['success']:
             imported_repositories = result['repositories']
-            register_repository_push_webhooks(organization_key, connector_key, imported_repositories)
+            register_repository_webhooks(organization_key, connector_key, imported_repositories)
             publish.repositories_imported(organization_key, imported_repositories)
             return result['repositories']
         else:

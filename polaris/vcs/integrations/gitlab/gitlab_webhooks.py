@@ -16,15 +16,20 @@ logger = logging.getLogger('polaris.vcs.integrations.gitlab.webhook')
 
 webhook = Blueprint('gitlab_webhooks', __name__)
 
-webhook_paths = {
-    'repository:push': '/repository/push'
-}
 
-
-@webhook.route(f"{webhook_paths['repository:push']}/<connector_key>/", methods=('GET', 'POST'))
+@webhook.route(f"/repository/push/<connector_key>/", methods=('GET', 'POST'))
 def repository_push(connector_key):
-    logger.info('Received webhook: repository push')
+    logger.info('Received webhook event @repository/push')
 
-    publish.gitlab_repository_event('repository:push', connector_key, request.data)
+    event_type = request.json['object_kind']
+    publish.gitlab_repository_event(event_type, connector_key, request.data)
     return ''
 
+
+@webhook.route(f"/repository/webhooks/<connector_key>/", methods=('GET', 'POST'))
+def repository_webhook(connector_key):
+    logger.info('Received webhook event @repository/webhooks')
+
+    event_type = request.json['object_kind']
+    publish.gitlab_repository_event(event_type, connector_key, request.data)
+    return ''

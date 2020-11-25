@@ -14,7 +14,6 @@ from datetime import datetime, timedelta
 from polaris.integrations.gitlab import GitlabConnector
 from polaris.utils.exceptions import ProcessingException
 from polaris.utils.config import get_config_provider
-from .gitlab_webhooks import webhook_paths
 from polaris.common.enums import VcsIntegrationTypes, GitlabPullRequestState
 
 config_provider = get_config_provider()
@@ -46,10 +45,10 @@ class GitlabRepositoriesConnector(GitlabConnector):
             ),
         )
 
-    def register_repository_push_hook(self, repository):
+    def register_repository_webhooks(self, repository):
         repo_source_id = repository['source_id']
-        repository_push_callback_url = f"{config_provider.get('GITLAB_WEBHOOKS_BASE_URL')}" \
-                                       f"{webhook_paths['repository:push']}/{self.key}"
+        repository_webhooks_callback_url = f"{config_provider.get('GITLAB_WEBHOOKS_BASE_URL')}" \
+                                          f"/repository/webhooks/{self.key}"
 
         add_hook_url = f"{self.base_url}/projects/{repo_source_id}/hooks"
 
@@ -58,8 +57,9 @@ class GitlabRepositoriesConnector(GitlabConnector):
             headers={"Authorization": f"Bearer {self.personal_access_token}"},
             data=dict(
                 id=repo_source_id,
-                url=repository_push_callback_url,
+                url=repository_webhooks_callback_url,
                 push_events=True,
+                merge_requests_events=True,
                 enable_ssl_verification=True,
                 token=self.webhook_secret
             )
@@ -71,12 +71,16 @@ class GitlabRepositoriesConnector(GitlabConnector):
                     repository_push=dict(
                         source_hook_id=result['id'],
                         created_at=result['created_at']
+                    ),
+                    merge_requests=dict(
+                        source_hook_id=result['id'],
+                        created_at=result['created_at']
                     )
                 )
             )
         else:
             raise ProcessingException(
-                f"Failed to register repository:push webhook for repository {repository['name']} ({repo_source_id})"
+                f"Failed to register repository webhooks for repository {repository['name']} ({repo_source_id})"
                 f'{response.status_code} {response.text}'
             )
 
@@ -135,30 +139,31 @@ class GitlabRepository(PolarisGitlabRepository):
         )
 
     def map_pull_request_info(self, pull_request):
-        if pull_request['merged_at'] is not None:
-            pr_end_date = pull_request['merged_at']
-        elif pull_request['closed_at'] is not None:
-            pr_end_date = pull_request['closed_at']
+        if pull_request.get('merged_at') is not None:
+            pr_end_date = pull_request.get('merged_at')
+        elif pull_request.get('closed_at') is not None:
+            pr_end_date = pull_request.get('closed_at')
         else:
             pr_end_date = None
         return dict(
-            source_id=pull_request['id'],
-            source_display_id=pull_request['iid'],
-            title=pull_request['title'],
-            description=pull_request['description'],
-            source_state=pull_request['state'],
-            state=self.state_mapping[pull_request['state']],
-            source_created_at=pull_request['created_at'],
-            source_last_updated=pull_request['updated_at'],
-            source_merge_status=pull_request['merge_status'],
-            source_merged_at=pull_request['merged_at'],
-            source_closed_at=pull_request['closed_at'],
+            source_id=pull_request.get('id'),
+            source_display_id=pull_request.get('iid'),
+            title=pull_request.get('title'),
+            description=pull_request.get('description'),
+            source_state=pull_request.get('state'),
+            state=self.state_mapping[pull_request.get('state')],
+            source_created_at=pull_request.get('created_at'),
+            source_last_updated=pull_request.get('updated_at'),
+            source_merge_status=pull_request.get('merge_status'),
+            source_merged_at=pull_request.get('merged_at'),
+            source_closed_at=pull_request.get('closed_at'),
             end_date=pr_end_date,
-            source_branch=pull_request['source_branch'],
-            target_branch=pull_request['target_branch'],
-            source_repository_source_id=pull_request['source_project_id'],
-            target_repository_source_id=pull_request['target_project_id'],
-            web_url=pull_request['web_url']
+            source_branch=pull_request.get('source_branch'),
+            target_branch=pull_request.get('target_branch'),
+            source_repository_source_id=pull_request.get('source_project_id'),
+            target_repository_source_id=pull_request.get('target_project_id'),
+            # NOTE: In PR object from webhook we get 'url' and not 'web_url'
+            web_url=pull_request.get('web_url') if pull_request.get('web_url') else pull_request.get('url')
         )
 
     def fetch_pull_requests(self):

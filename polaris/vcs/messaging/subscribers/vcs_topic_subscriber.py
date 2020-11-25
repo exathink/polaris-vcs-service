@@ -8,6 +8,7 @@
 
 # Author: Krishna Kumar
 
+import json
 import logging
 
 from polaris.messaging.topics import TopicSubscriber, VcsTopic
