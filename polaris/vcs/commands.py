@@ -51,7 +51,7 @@ def sync_pull_requests(repository_key):
 
 def register_repository_webhooks(organization_key, connector_key, repository_summaries):
     connector = connector_factory.get_connector(connector_key=connector_key)
-    if connector and getattr(connector, 'register_repository_push_hook', None):
+    if connector and getattr(connector, 'register_repository_webhooks', None):
         for repo in repository_summaries:
             try:
                 webhook_info = connector.register_repository_webhooks(repo)
