@@ -152,22 +152,30 @@ class EditVcsConnector(EditConnector):
 class RegisterWebhooksInput(graphene.InputObjectType):
     connector_key = graphene.String(required=True)
     repository_keys = graphene.List(graphene.String, required=True)
-    webhook_events = graphene.List(graphene.String, required=True)
+
+
+class WebhooksRegistrationStatus(graphene.InputObjectType):
+    repository_key = graphene.String(required=True)
+    status = graphene.String(required=True)
+    error_message = graphene.String(required=False)
 
 
 class RegisterRepositoriesConnectorWebhooks(graphene.Mutation):
     class Arguments:
         register_webhooks_input = RegisterWebhooksInput(required=True)
 
+    #webhooks_registration_status = graphene.List(WebhooksRegistrationStatus)
     success = graphene.Boolean()
 
     def mutate(self, info, register_webhooks_input):
         connector_key = register_webhooks_input.connector_key
         repository_keys = register_webhooks_input.repository_keys
-        webhooks_events = register_webhooks_input.webhook_events
 
         logger.info(f'Register webhooks called for connector: {connector_key}')
         with db.orm_session() as session:
-            return RegisterRepositoriesConnectorWebhooks(
-                success=commands.register_repository_webhooks(connector_key, repository_keys, webhooks_events, join_this=session)
-            )
+            # FIXME: Parse the result and return in proper format
+            result = commands.register_repositories_webhooks(connector_key, repository_keys, join_this=session)
+            if result:
+                return RegisterRepositoriesConnectorWebhooks(
+                   success=True
+                )

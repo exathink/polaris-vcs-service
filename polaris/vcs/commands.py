@@ -50,26 +50,43 @@ def sync_pull_requests(repository_key):
         return []
 
 
-def register_repository_webhooks(connector_key, repository_keys, webhook_events, join_this=None):
+def register_repository_webhooks(connector_key, repository_key, join_this=None):
     with db.orm_session(join_this) as session:
         connector = connector_factory.get_connector(connector_key=connector_key, join_this=session)
         if connector and getattr(connector, 'register_repository_webhooks', None):
-            for repository_key in repository_keys:
-                repo = Repository.find_by_repository_key(session, repository_key=repository_key)
-                if repo:
-                    try:
-                        webhook_info = connector.register_repository_webhooks(repo.source_id, webhook_events)
-                        api.register_webhooks(repository_key, webhook_info, join_this=session)
-                    except ProcessingException as e:
-                        log.error(e)
+            repo = Repository.find_by_repository_key(session, repository_key=repository_key)
+            if repo:
+                try:
+                    registered_webhooks = api.get_registered_webhooks(repository_key, join_this=session)
+                    webhook_info = connector.register_repository_webhooks(repo.source_id, registered_webhooks)
+                    api.register_webhooks(repository_key, webhook_info, join_this=session)
+                    return True
+                except ProcessingException as e:
+                    log.error(e)
+                    return ProcessingException(f"Register webhooks failed for repository with id {repo.id} due to: {e}")
+            else:
+                return ProcessingException(f"Could not find repository with key {repository_key}")
+        else:
+            return ProcessingException(f"Could not find connector with key {connector_key}")
+
+
+def register_repositories_webhooks(connector_key, repository_keys, join_this=None):
+    result = []
+    for repository_key in repository_keys:
+        registration_status = register_repository_webhooks(connector_key, repository_key, join_this=join_this)
+        if registration_status == True:
+            result.append({'repository_key':repository_key, 'status':registration_status, 'error_message': None})
+        else:
+            result.append({'repository_key': repository_key, 'status': False, 'error_message': registration_status})
+    return result
 
 
 def import_repositories(organization_key, connector_key, repository_keys):
-    with db.orm_session():
+    with db.orm_session() as session:
         result = api.import_repositories(organization_key, repository_keys)
         if result['success']:
             imported_repositories = result['repositories']
-            register_repository_webhooks(organization_key, connector_key, imported_repositories)
+            register_repository_webhooks(connector_key, imported_repositories, join_this=session)
             publish.repositories_imported(organization_key, imported_repositories)
             return result['repositories']
         else:

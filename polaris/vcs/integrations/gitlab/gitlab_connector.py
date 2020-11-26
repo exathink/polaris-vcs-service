@@ -26,6 +26,7 @@ class GitlabRepositoriesConnector(GitlabConnector):
     def __init__(self, connector):
         super().__init__(connector)
         self.webhook_secret = connector.webhook_secret
+        self.webhook_events = ['push_events', 'merge_requests_events']
 
     def map_repository_info(self, repo):
         return dict(
@@ -45,9 +46,17 @@ class GitlabRepositoriesConnector(GitlabConnector):
             ),
         )
 
-    def register_repository_webhooks(self, repo_source_id, webhook_events):
+    def register_repository_webhooks(self, repo_source_id, registered_webhooks):
+        # FIXME: The current deletion logic assumes we may have multiple webhooks registered in past which need to be deleted.
+        deleted_hook_ids = None
+        if registered_webhooks:
+            for registered_webhook in registered_webhooks:
+                # TODO: Deletion is yet to be tested
+                if self.delete_repository_webhook(repo_source_id, registered_webhook['source_hook_id']):
+                    deleted_hook_ids.append(registered_webhook['source_hook_id'])
+
         repository_webhooks_callback_url = f"{config_provider.get('GITLAB_WEBHOOKS_BASE_URL')}" \
-                                          f"/repository/webhooks/{self.key}"
+                                          f"/repository/webhooks/{self.key}/"
 
         add_hook_url = f"{self.base_url}/projects/{repo_source_id}/hooks"
 
@@ -59,8 +68,7 @@ class GitlabRepositoriesConnector(GitlabConnector):
             enable_ssl_verification=True,
             token=self.webhook_secret
         )
-        for event in webhook_events:
-            # TODO: Create an enum for gitlab events
+        for event in self.webhook_events:
             post_data[f'{event}'] = True
 
         response = requests.post(
@@ -74,14 +82,28 @@ class GitlabRepositoriesConnector(GitlabConnector):
                 webhooks=dict(
                     source_hook_id=result['id'],
                     created_at=result['created_at'],
-                    registered_events=webhook_events
-                )
+                    registered_events=self.webhook_events
+                ),
+                deleted_hook_ids=deleted_hook_ids
             )
         else:
             raise ProcessingException(
                 f"Failed to register repository webhooks for repository with source id: ({repo_source_id})"
                 f'{response.status_code} {response.text}'
             )
+
+    def delete_repository_webhook(self, repo_source_id, source_hook_id):
+        delete_hook_url = f"{self.base_url}/projects/{repo_source_id}/hooks/{source_hook_id}"
+        response = requests.delete(
+            delete_hook_url,
+            headers={"Authorization": f"Bearer {self.personal_access_token}"},
+        )
+        if response.ok:
+            result = response.json()
+            if result.get('hook_id') is None:
+                logger.info("The hook does not exist")
+            return True
+
 
     def fetch_repositories(self):
         fetch_repos_url = f'{self.base_url}/projects'

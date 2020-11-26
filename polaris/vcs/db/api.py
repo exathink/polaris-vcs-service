@@ -56,6 +56,16 @@ def register_webhooks(repository_key, webhook_info, join_this=None):
         return db.failure_message('Register Webhook', e)
 
 
+def get_registered_webhooks(repository_key, join_this=None):
+    try:
+        with db.orm_session(join_this) as session:
+            return repositories.get_registered_webhooks(session, repository_key)
+    except SQLAlchemyError as exc:
+        return db.process_exception("Register Webhook", exc)
+    except Exception as e:
+        return db.failure_message('Register Webhook', e)
+
+
 def handle_remote_repository_push(connector_key, repository_source_id):
     try:
         with db.orm_session() as session:

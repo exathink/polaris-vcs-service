@@ -173,10 +173,26 @@ def register_webhooks(session, repository_key, webhook_info):
     if repo is not None:
         log.info(f'Registering webhook for repository {repo.name}')
         source_data = dict(repo.source_data)
+        if webhook_info['deleted_hook_ids']:
+            if source_data['webhooks']['source_hook_id'] in webhook_info['deleted_hook_ids']:
+                source_data['webhooks'] = {}
+        # FIXME: Confusion here. Can there still be multiple webhooks? Possible when listening on multiple urls. \
+        #  Not sure. Discuss. And if there can be only one webhook, no need to delete, just check and overwrite.
         source_data['webhooks'] = dict_merge(source_data.get('webhooks', {}), webhook_info['webhooks'])
         repo.source_data = source_data
         if 'push_events' in webhook_info['webhooks']['registered_events']:
             repo.polling = False
+    else:
+        raise ProcessingException(f"Could not find repository with key {repository_key}")
+
+
+def get_registered_webhooks(session, repository_key):
+    # FIXME: Discuss if we really need a separate function and API wrapper to do this
+    repo = Repository.find_by_repository_key(session, repository_key)
+    if repo is not None:
+        log.info(f'Getting registered webhooks for repository {repo.name}')
+        source_data = dict(repo.source_data)
+        return source_data.get('webhooks')
     else:
         raise ProcessingException(f"Could not find repository with key {repository_key}")
 
@@ -195,6 +211,3 @@ def handle_remote_repository_push(session, connector_key, repository_source_id):
         )
     else:
         raise ProcessingException(f"Could not find repository with key {repository_key}")
-
-
-
