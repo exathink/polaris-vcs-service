@@ -75,7 +75,7 @@ def register_repositories_webhooks(connector_key, repository_keys, join_this=Non
     for repository_key in repository_keys:
         registration_status = register_repository_webhooks(connector_key, repository_key, join_this=join_this)
         if registration_status == True:
-            result.append({'repository_key': repository_key, 'status': registration_status, 'error_message': None})
+            result.append({'repository_key': repository_key, 'status': registration_status})
         else:
             result.append({'repository_key': repository_key, 'status': False, 'error_message': registration_status})
     return result

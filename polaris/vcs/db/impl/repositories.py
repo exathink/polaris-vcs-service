@@ -168,6 +168,9 @@ def import_repositories(session, organization_key, repository_keys):
 
 
 def register_webhooks(session, repository_key, webhook_info):
+    # Replaces active webhook with the latest registered webhook.
+    # Moves old active webhook to inactive webhooks
+    # Deletes inactive webhook ids which are passed in webhook info
     repo = Repository.find_by_repository_key(session, repository_key)
     if repo is not None:
         log.info(f'Registering webhook for repository {repo.name}')

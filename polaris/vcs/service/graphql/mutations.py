@@ -164,7 +164,7 @@ class RegisterRepositoriesConnectorWebhooks(graphene.Mutation):
     class Arguments:
         register_webhooks_input = RegisterWebhooksInput(required=True)
 
-    # webhooks_registration_status = graphene.List(WebhooksRegistrationStatus)
+    webhooks_registration_status = graphene.List(WebhooksRegistrationStatus)
     success = graphene.Boolean()
 
     def mutate(self, info, register_webhooks_input):
