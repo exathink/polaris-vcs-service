@@ -20,7 +20,6 @@ from polaris.repos.db.model import repositories, Repository
 from polaris.repos.db.schema import RepositoryImportState
 from polaris.utils.exceptions import ProcessingException
 from polaris.common.db import row_proxy_to_dict
-from polaris.utils.collections import dict_merge
 
 log = logging.getLogger('polaris.vcs.db.impl.repositories')
 
@@ -173,26 +172,34 @@ def register_webhooks(session, repository_key, webhook_info):
     if repo is not None:
         log.info(f'Registering webhook for repository {repo.name}')
         source_data = dict(repo.source_data)
-        if webhook_info['deleted_hook_ids']:
-            if source_data['webhooks']['source_hook_id'] in webhook_info['deleted_hook_ids']:
-                source_data['webhooks'] = {}
-        # FIXME: Confusion here. Can there still be multiple webhooks? Possible when listening on multiple urls. \
-        #  Not sure. Discuss. And if there can be only one webhook, no need to delete, just check and overwrite.
-        source_data['webhooks'] = dict_merge(source_data.get('webhooks', {}), webhook_info['webhooks'])
+        if webhook_info['active_webhook']:
+            if source_data.get('active_webhook'):
+                inactive_webhooks = source_data.get('inactive_webhooks', [])
+                inactive_webhooks.append(source_data.get('active_webhook'))
+                source_data['inactive_webhooks'] = inactive_webhooks
+            source_data['active_webhook'] = webhook_info['active_webhook']
+        for wid in webhook_info['deleted_webhooks']:
+            try:
+                source_data['inactive_webhooks'].remove(wid)
+            except ValueError:
+                logging.info(f"Webhook id: {wid} not found in inactive webhooks list")
         repo.source_data = source_data
-        if 'push_events' in webhook_info['webhooks']['registered_events']:
+        if 'push_events' in webhook_info['registered_events']:
             repo.polling = False
     else:
         raise ProcessingException(f"Could not find repository with key {repository_key}")
 
 
 def get_registered_webhooks(session, repository_key):
-    # FIXME: Discuss if we really need a separate function and API wrapper to do this
     repo = Repository.find_by_repository_key(session, repository_key)
     if repo is not None:
         log.info(f'Getting registered webhooks for repository {repo.name}')
         source_data = dict(repo.source_data)
-        return source_data.get('webhooks')
+        registered_webhooks = []
+        if source_data.get('active_webhook'):
+            registered_webhooks.extend(source_data.get('inactive_webhooks', []))
+            registered_webhooks.append(source_data.get('active_webhook'))
+        return registered_webhooks
     else:
         raise ProcessingException(f"Could not find repository with key {repository_key}")
 
@@ -210,4 +217,4 @@ def handle_remote_repository_push(session, connector_key, repository_source_id):
             repository_key=repo.key,
         )
     else:
-        raise ProcessingException(f"Could not find repository with key {repository_key}")
+        raise ProcessingException(f"Could not find repository with source_id {repository_source_id}")

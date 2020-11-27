@@ -47,16 +47,8 @@ class GitlabRepositoriesConnector(GitlabConnector):
         )
 
     def register_repository_webhooks(self, repo_source_id, registered_webhooks):
-        # FIXME: The current deletion logic assumes we may have multiple webhooks registered in past which need to be deleted.
-        deleted_hook_ids = None
-        if registered_webhooks:
-            for registered_webhook in registered_webhooks:
-                # TODO: Deletion is yet to be tested
-                if self.delete_repository_webhook(repo_source_id, registered_webhook['source_hook_id']):
-                    deleted_hook_ids.append(registered_webhook['source_hook_id'])
-
         repository_webhooks_callback_url = f"{config_provider.get('GITLAB_WEBHOOKS_BASE_URL')}" \
-                                          f"/repository/webhooks/{self.key}/"
+                                           f"/repository/webhooks/{self.key}/"
 
         add_hook_url = f"{self.base_url}/projects/{repo_source_id}/hooks"
 
@@ -78,32 +70,62 @@ class GitlabRepositoriesConnector(GitlabConnector):
         )
         if response.ok:
             result = response.json()
-            return dict(
-                webhooks=dict(
-                    source_hook_id=result['id'],
-                    created_at=result['created_at'],
-                    registered_events=self.webhook_events
-                ),
-                deleted_hook_ids=deleted_hook_ids
-            )
+            active_hook_id = result['id']
         else:
             raise ProcessingException(
                 f"Failed to register repository webhooks for repository with source id: ({repo_source_id})"
                 f'{response.status_code} {response.text}'
             )
 
-    def delete_repository_webhook(self, repo_source_id, source_hook_id):
-        delete_hook_url = f"{self.base_url}/projects/{repo_source_id}/hooks/{source_hook_id}"
-        response = requests.delete(
-            delete_hook_url,
-            headers={"Authorization": f"Bearer {self.personal_access_token}"},
+        # Check for all available hooks
+        available_hooks = self.get_available_webhooks(repo_source_id)
+        available_hooks.remove(active_hook_id)
+
+        deleted_hook_ids = set(registered_webhooks) - set(available_hooks)
+
+        # Delete old hooks if any
+        if registered_webhooks or available_hooks:
+            hooks_to_delete = set(available_hooks).union(set(available_hooks) - set(registered_webhooks))
+            for inactive_hook_id in hooks_to_delete:
+                if self.delete_repository_webhook(repo_source_id, inactive_hook_id):
+                    deleted_hook_ids.add(inactive_hook_id)
+        return dict(
+            active_webhook=active_hook_id,
+            deleted_webhooks=list(deleted_hook_ids),
+            registered_events=self.webhook_events
+        )
+
+    def get_available_webhooks(self, repo_source_id):
+        get_hooks_url = f"{self.base_url}/projects/{repo_source_id}/hooks"
+        response = requests.get(
+            get_hooks_url,
+            headers={"Authorization": f"Bearer {self.personal_access_token}"}
         )
         if response.ok:
             result = response.json()
-            if result.get('hook_id') is None:
-                logger.info("The hook does not exist")
-            return True
+            available_hooks = []
+            for hook in result:
+                available_hooks.append(hook['id'])
+            return available_hooks
 
+    def delete_repository_webhook(self, repo_source_id, inactive_hook_id):
+        # Check for available hooks first. Delete all apart from the active hook
+
+        delete_hook_url = f"{self.base_url}/projects/{repo_source_id}/hooks/{inactive_hook_id}"
+        response = requests.delete(
+            delete_hook_url,
+            headers={"Authorization": f"Bearer {self.personal_access_token}"}
+        )
+        if response.ok:
+            # result = response.json()
+            # if result.get('hook_id') is None:
+            # logger.info("The hook does not exist")
+            return True
+        else:
+            logger.info(
+                f"Failed to delete repository webhooks for repository with source id: ({repo_source_id})"
+                f'{response.status_code} {response.text}'
+            )
 
     def fetch_repositories(self):
         fetch_repos_url = f'{self.base_url}/projects'
