@@ -172,15 +172,14 @@ class RegisterRepositoriesConnectorWebhooks(graphene.Mutation):
 
         logger.info(f'Register webhooks called for connector: {connector_key}')
         with db.orm_session() as session:
-            # FIXME: Parse the result and return in proper format
             result = commands.register_repositories_webhooks(connector_key, repository_keys, join_this=session)
             if result:
                 return RegisterRepositoriesConnectorWebhooks(
                     webhooks_registration_status=[
                         WebhooksRegistrationStatus(
-                            repository_key=r['repository_key'],
-                            success=r['status'],
-                            error_message=r.get('error_message')
+                            repository_key=status.get('repository_key'),
+                            success=status.get('success'),
+                            error_message=status.get('error_message')
                         )
-                    for r in result]
+                    for status in result]
                 )

@@ -60,24 +60,31 @@ def register_repository_webhooks(connector_key, repository_key, join_this=None):
                     registered_webhooks = api.get_registered_webhooks(repository_key, join_this=session)
                     webhook_info = connector.register_repository_webhooks(repo.source_id, registered_webhooks)
                     api.register_webhooks(repository_key, webhook_info, join_this=session)
-                    return True
+                    return dict(
+                        success=True,
+                        repository_key=repository_key
+                    )
                 except ProcessingException as e:
                     log.error(e)
-                    return ProcessingException(f"Register webhooks failed for repository with id {repo.id} due to: {e}")
+                    return db.failure_message(f"Register webhooks failed for repository with id {repo.id}")
             else:
-                return ProcessingException(f"Could not find repository with key {repository_key}")
+                return db.failure_message(f"Could not find repository with key {repository_key}")
         else:
-            return ProcessingException(f"Could not find connector with key {connector_key}")
+            return db.failure_message(f"Could not find connector with key {connector_key}")
 
 
 def register_repositories_webhooks(connector_key, repository_keys, join_this=None):
     result = []
     for repository_key in repository_keys:
         registration_status = register_repository_webhooks(connector_key, repository_key, join_this=join_this)
-        if registration_status == True:
-            result.append({'repository_key': repository_key, 'status': registration_status})
+        if registration_status['success']:
+             result.append(registration_status)
         else:
-            result.append({'repository_key': repository_key, 'status': False, 'error_message': registration_status})
+             result.append(dict(
+                 repository_key=repository_key,
+                 success=False,
+                 error_message=registration_status.get('message')
+             ))
     return result
 
 
@@ -86,7 +93,11 @@ def import_repositories(organization_key, connector_key, repository_keys):
         result = api.import_repositories(organization_key, repository_keys)
         if result['success']:
             imported_repositories = result['repositories']
-            register_repository_webhooks(connector_key, imported_repositories, join_this=session)
+            # FIXME: Shall we fail when even one repository webhook registration fails? OR just log error and continue?
+            for repo in imported_repositories:
+                register_webhooks_result = register_repository_webhooks(connector_key, repo['key'], join_this=session)
+                if not register_webhooks_result['success']:
+                    raise ProcessingException(f"Import repositories failed: {register_webhooks_result.get('exception')}")
             publish.repositories_imported(organization_key, imported_repositories)
             return result['repositories']
         else:
