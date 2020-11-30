@@ -154,9 +154,9 @@ class RegisterWebhooksInput(graphene.InputObjectType):
     repository_keys = graphene.List(graphene.String, required=True)
 
 
-class WebhooksRegistrationStatus(graphene.InputObjectType):
+class WebhooksRegistrationStatus(graphene.ObjectType):
     repository_key = graphene.String(required=True)
-    status = graphene.String(required=True)
+    success = graphene.Boolean(required=True)
     error_message = graphene.String(required=False)
 
 
@@ -165,7 +165,6 @@ class RegisterRepositoriesConnectorWebhooks(graphene.Mutation):
         register_webhooks_input = RegisterWebhooksInput(required=True)
 
     webhooks_registration_status = graphene.List(WebhooksRegistrationStatus)
-    success = graphene.Boolean()
 
     def mutate(self, info, register_webhooks_input):
         connector_key = register_webhooks_input.connector_key
@@ -177,5 +176,11 @@ class RegisterRepositoriesConnectorWebhooks(graphene.Mutation):
             result = commands.register_repositories_webhooks(connector_key, repository_keys, join_this=session)
             if result:
                 return RegisterRepositoriesConnectorWebhooks(
-                    success=True
+                    webhooks_registration_status=[
+                        WebhooksRegistrationStatus(
+                            repository_key=r['repository_key'],
+                            success=r['status'],
+                            error_message=r.get('error_message')
+                        )
+                    for r in result]
                 )
