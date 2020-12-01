@@ -48,7 +48,7 @@ class GitlabRepositoriesConnector(GitlabConnector):
 
     def register_repository_webhooks(self, repo_source_id, registered_webhooks):
         repository_webhooks_callback_url = f"{config_provider.get('GITLAB_WEBHOOKS_BASE_URL')}" \
-                                           f"/repository/webhooks/{self.key}/"
+                                          f"/repository/webhooks/{self.key}/"
 
         add_hook_url = f"{self.base_url}/projects/{repo_source_id}/hooks"
 
