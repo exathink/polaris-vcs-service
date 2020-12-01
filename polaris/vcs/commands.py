@@ -78,13 +78,13 @@ def register_repositories_webhooks(connector_key, repository_keys, join_this=Non
     for repository_key in repository_keys:
         registration_status = register_repository_webhooks(connector_key, repository_key, join_this=join_this)
         if registration_status['success']:
-             result.append(registration_status)
+            result.append(registration_status)
         else:
-             result.append(dict(
-                 repository_key=repository_key,
-                 success=False,
-                 error_message=registration_status.get('message')
-             ))
+            result.append(dict(
+                repository_key=repository_key,
+                success=False,
+                error_message=registration_status.get('message')
+            ))
     return result
 
 
@@ -97,7 +97,8 @@ def import_repositories(organization_key, connector_key, repository_keys):
             for repo in imported_repositories:
                 register_webhooks_result = register_repository_webhooks(connector_key, repo['key'], join_this=session)
                 if not register_webhooks_result['success']:
-                    raise ProcessingException(f"Import repositories failed: {register_webhooks_result.get('exception')}")
+                    raise ProcessingException(
+                        f"Import repositories failed: {register_webhooks_result.get('exception')}")
             publish.repositories_imported(organization_key, imported_repositories)
             return result['repositories']
         else:

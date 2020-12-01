@@ -170,7 +170,7 @@ def import_repositories(session, organization_key, repository_keys):
 def register_webhooks(session, repository_key, webhook_info):
     # Replaces active webhook with the latest registered webhook.
     # Moves old active webhook to inactive webhooks
-    # Deletes inactive webhook ids which are passed in webhook info
+    # Deletes inactive webhook ids which are passed in webhook info and present in source_data
     repo = Repository.find_by_repository_key(session, repository_key)
     if repo is not None:
         log.info(f'Registering webhook for repository {repo.name}')
@@ -182,10 +182,10 @@ def register_webhooks(session, repository_key, webhook_info):
                 source_data['inactive_webhooks'] = inactive_webhooks
             source_data['active_webhook'] = webhook_info['active_webhook']
         for wid in webhook_info['deleted_webhooks']:
-            try:
+            if source_data.get('inactive_webhooks') and wid in source_data.get('inactive_webhooks'):
                 source_data['inactive_webhooks'].remove(wid)
-            except ValueError:
-                logging.info(f"Webhook id: {wid} not found in inactive webhooks list")
+        if source_data.get('webhooks'):
+            del source_data['webhooks']
         repo.source_data = source_data
         if 'push_events' in webhook_info['registered_events']:
             repo.polling = False
