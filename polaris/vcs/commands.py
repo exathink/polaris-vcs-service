@@ -17,6 +17,7 @@ from polaris.vcs.db import api
 from polaris.vcs.messaging import publish
 from polaris.utils.exceptions import ProcessingException
 from polaris.repos.db.model import Repository
+from polaris.common.enums import ConnectorType
 
 log = logging.getLogger('polaris.vcs.service.commands')
 
@@ -69,6 +70,12 @@ def register_repository_webhooks(connector_key, repository_key, join_this=None):
                     return db.failure_message(f"Register webhooks failed for repository with id {repo.id}")
             else:
                 return db.failure_message(f"Could not find repository with key {repository_key}")
+        elif connector:
+            # TODO: Remove this when github and bitbucket register webhook implementation is done.
+            return dict(
+                success=True,
+                repository_key=repository_key
+            )
         else:
             return db.failure_message(f"Could not find connector with key {connector_key}")
 
