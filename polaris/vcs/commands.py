@@ -16,6 +16,8 @@ from polaris.integrations.db.api import tracking_receipt_updates
 from polaris.vcs.db import api
 from polaris.vcs.messaging import publish
 from polaris.utils.exceptions import ProcessingException
+from polaris.repos.db.model import Repository
+from polaris.common.enums import ConnectorType
 
 log = logging.getLogger('polaris.vcs.service.commands')
 
@@ -49,23 +51,61 @@ def sync_pull_requests(repository_key):
         return []
 
 
-def register_repository_webhooks(organization_key, connector_key, repository_summaries):
-    connector = connector_factory.get_connector(connector_key=connector_key)
-    if connector and getattr(connector, 'register_repository_webhooks', None):
-        for repo in repository_summaries:
-            try:
-                webhook_info = connector.register_repository_webhooks(repo)
-                api.register_webhook(organization_key, repo['key'], webhook_info)
-            except ProcessingException as e:
-                log.error(e)
+def register_repository_webhooks(connector_key, repository_key, join_this=None):
+    with db.orm_session(join_this) as session:
+        connector = connector_factory.get_connector(connector_key=connector_key, join_this=session)
+        if connector and getattr(connector, 'register_repository_webhooks', None):
+            repo = Repository.find_by_repository_key(session, repository_key=repository_key)
+            if repo:
+                try:
+                    registered_webhooks = api.get_registered_webhooks(repository_key, join_this=session)
+                    webhook_info = connector.register_repository_webhooks(repo.source_id, registered_webhooks)
+                    api.register_webhooks(repository_key, webhook_info, join_this=session)
+                    return dict(
+                        success=True,
+                        repository_key=repository_key
+                    )
+                except ProcessingException as e:
+                    log.error(e)
+                    return db.failure_message(f"Register webhooks failed for repository with id {repo.id}")
+            else:
+                return db.failure_message(f"Could not find repository with key {repository_key}")
+        elif connector:
+            # TODO: Remove this when github and bitbucket register webhook implementation is done.
+            return dict(
+                success=True,
+                repository_key=repository_key
+            )
+        else:
+            return db.failure_message(f"Could not find connector with key {connector_key}")
+
+
+def register_repositories_webhooks(connector_key, repository_keys, join_this=None):
+    result = []
+    for repository_key in repository_keys:
+        registration_status = register_repository_webhooks(connector_key, repository_key, join_this=join_this)
+        if registration_status['success']:
+            result.append(registration_status)
+        else:
+            result.append(dict(
+                repository_key=repository_key,
+                success=False,
+                error_message=registration_status.get('message')
+            ))
+    return result
 
 
 def import_repositories(organization_key, connector_key, repository_keys):
-    with db.orm_session():
+    with db.orm_session() as session:
         result = api.import_repositories(organization_key, repository_keys)
         if result['success']:
             imported_repositories = result['repositories']
-            register_repository_webhooks(organization_key, connector_key, imported_repositories)
+            # FIXME: Shall we fail when even one repository webhook registration fails? OR just log error and continue?
+            for repo in imported_repositories:
+                register_webhooks_result = register_repository_webhooks(connector_key, repo['key'], join_this=session)
+                if not register_webhooks_result['success']:
+                    raise ProcessingException(
+                        f"Import repositories failed: {register_webhooks_result.get('exception')}")
             publish.repositories_imported(organization_key, imported_repositories)
             return result['repositories']
         else:

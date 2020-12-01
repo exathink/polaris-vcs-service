@@ -20,7 +20,6 @@ from polaris.repos.db.model import repositories, Repository
 from polaris.repos.db.schema import RepositoryImportState
 from polaris.utils.exceptions import ProcessingException
 from polaris.common.db import row_proxy_to_dict
-from polaris.utils.collections import dict_merge
 
 log = logging.getLogger('polaris.vcs.db.impl.repositories')
 
@@ -168,15 +167,42 @@ def import_repositories(session, organization_key, repository_keys):
     )
 
 
-def register_webhook(session, organization_key, repository_key, webhook_info):
+def register_webhooks(session, repository_key, webhook_info):
+    # Replaces active webhook with the latest registered webhook.
+    # Moves old active webhook to inactive webhooks
+    # Deletes inactive webhook ids which are passed in webhook info and present in source_data
     repo = Repository.find_by_repository_key(session, repository_key)
     if repo is not None:
-        log.info(f'Registering webhook for organization {organization_key} Repository {repo.name}')
+        log.info(f'Registering webhook for repository {repo.name}')
         source_data = dict(repo.source_data)
-        source_data['webhooks'] = dict_merge(source_data.get('webhooks', {}), webhook_info['webhooks'])
+        if webhook_info['active_webhook']:
+            if source_data.get('active_webhook'):
+                inactive_webhooks = source_data.get('inactive_webhooks', [])
+                inactive_webhooks.append(source_data.get('active_webhook'))
+                source_data['inactive_webhooks'] = inactive_webhooks
+            source_data['active_webhook'] = webhook_info['active_webhook']
+        for wid in webhook_info['deleted_webhooks']:
+            if source_data.get('inactive_webhooks') and wid in source_data.get('inactive_webhooks'):
+                source_data['inactive_webhooks'].remove(wid)
+        if source_data.get('webhooks'):
+            del source_data['webhooks']
         repo.source_data = source_data
-        if 'repository_push' in webhook_info['webhooks']:
+        if 'push_events' in webhook_info['registered_events']:
             repo.polling = False
+    else:
+        raise ProcessingException(f"Could not find repository with key {repository_key}")
+
+
+def get_registered_webhooks(session, repository_key):
+    repo = Repository.find_by_repository_key(session, repository_key)
+    if repo is not None:
+        log.info(f'Getting registered webhooks for repository {repo.name}')
+        source_data = dict(repo.source_data)
+        registered_webhooks = []
+        if source_data.get('active_webhook'):
+            registered_webhooks.extend(source_data.get('inactive_webhooks', []))
+            registered_webhooks.append(source_data.get('active_webhook'))
+        return registered_webhooks
     else:
         raise ProcessingException(f"Could not find repository with key {repository_key}")
 
@@ -194,7 +220,4 @@ def handle_remote_repository_push(session, connector_key, repository_source_id):
             repository_key=repo.key,
         )
     else:
-        raise ProcessingException(f"Could not find repository with key {repository_key}")
-
-
-
+        raise ProcessingException(f"Could not find repository with source_id {repository_source_id}")
