@@ -53,31 +53,35 @@ def sync_pull_requests(repository_key):
 
 def register_repository_webhooks(connector_key, repository_key, join_this=None):
     with db.orm_session(join_this) as session:
-        connector = connector_factory.get_connector(connector_key=connector_key, join_this=session)
-        if connector and getattr(connector, 'register_repository_webhooks', None):
-            repo = Repository.find_by_repository_key(session, repository_key=repository_key)
-            if repo:
-                try:
-                    registered_webhooks = api.get_registered_webhooks(repository_key, join_this=session)
-                    webhook_info = connector.register_repository_webhooks(repo.source_id, registered_webhooks)
-                    api.register_webhooks(repository_key, webhook_info, join_this=session)
-                    return dict(
-                        success=True,
-                        repository_key=repository_key
-                    )
-                except ProcessingException as e:
-                    log.error(e)
-                    return db.failure_message(f"Register webhooks failed for repository with id {repo.id}")
+        try:
+            connector = connector_factory.get_connector(connector_key=connector_key, join_this=session)
+            if connector and getattr(connector, 'register_repository_webhooks', None):
+                repo = Repository.find_by_repository_key(session, repository_key=repository_key)
+                if repo:
+                    try:
+                        registered_webhooks = api.get_registered_webhooks(repository_key, join_this=session)
+                        webhook_info = connector.register_repository_webhooks(repo.source_id, registered_webhooks)
+                        api.register_webhooks(repository_key, webhook_info, join_this=session)
+                        return dict(
+                            success=True,
+                            repository_key=repository_key
+                        )
+                    except ProcessingException as e:
+                        log.error(e)
+                        return db.failure_message(f"Register webhooks failed for repository with id {repo.id}")
+                else:
+                    return db.failure_message(f"Could not find repository with key {repository_key}")
+            elif connector:
+                # TODO: Remove this when github and bitbucket register webhook implementation is done.
+                return dict(
+                    success=True,
+                    repository_key=repository_key
+                )
             else:
-                return db.failure_message(f"Could not find repository with key {repository_key}")
-        elif connector:
-            # TODO: Remove this when github and bitbucket register webhook implementation is done.
-            return dict(
-                success=True,
-                repository_key=repository_key
-            )
-        else:
-            return db.failure_message(f"Could not find connector with key {connector_key}")
+                return db.failure_message(f"Could not find connector with key {connector_key}")
+        except ProcessingException as e:
+            return db.failure_message(f"Register webhooks failed due to: {e}")
+
 
 
 def register_repositories_webhooks(connector_key, repository_keys, join_this=None):

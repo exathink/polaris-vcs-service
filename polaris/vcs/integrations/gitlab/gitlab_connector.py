@@ -47,11 +47,15 @@ class GitlabRepositoriesConnector(GitlabConnector):
         )
 
     def register_repository_webhooks(self, repo_source_id, registered_webhooks):
-        # Delete the inactive hooks
+        # Delete the inactive hooks. Add all to deleted_hook_ids as either it is successfully deleted or \
+        # we are storing some old id which is no longer present
         deleted_hook_ids = []
         for inactive_hook_id in registered_webhooks:
             if self.delete_repository_webhook(repo_source_id, inactive_hook_id):
-                deleted_hook_ids.append(inactive_hook_id)
+                logger.info(f"Deleted webhook with id {inactive_hook_id} for repo {repo_source_id}")
+            else:
+                logger.info(f"Webhook with id {inactive_hook_id} for repo {repo_source_id} does not exist")
+            deleted_hook_ids.append(inactive_hook_id)
 
         # Register new webhook now
         repository_webhooks_callback_url = f"{config_provider.get('GITLAB_WEBHOOKS_BASE_URL')}" \
