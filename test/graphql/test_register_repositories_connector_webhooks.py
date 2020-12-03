@@ -8,6 +8,7 @@
 
 # Author: Pragya Goyal
 
+import uuid
 import pytest
 from unittest.mock import patch
 from polaris.utils.collections import Fixture
@@ -53,7 +54,7 @@ class TestRegisterRepositoriesConnectorWebhooks:
 
             with patch('polaris.vcs.integrations.gitlab.GitlabRepositoriesConnector.register_repository_webhooks') as register_webhooks:
                 register_webhooks.return_value = dict(
-                        active_webhook=str(fixture.active_hook_id),
+                        active_webhook=fixture.active_hook_id,
                         deleted_webhooks=[],
                         registered_events=fixture.registered_events
                     )
@@ -77,4 +78,119 @@ class TestRegisterRepositoriesConnectorWebhooks:
                     and polling=false \
                     and source_data->>'active_webhook'='{fixture.active_hook_id}'"\
                 ).scalar()==1
+
+        def it_re_registers_webhooks_and_updates_source_data(self, setup):
+            fixture = setup
+            client = Client(schema)
+            new_webhook_id = 1001
+
+            with patch(
+                    'polaris.vcs.integrations.gitlab.GitlabRepositoriesConnector.register_repository_webhooks') as register_webhooks:
+                register_webhooks.return_value = dict(
+                    active_webhook=fixture.active_hook_id,
+                    deleted_webhooks=[fixture.active_hook_id],
+                    registered_events=fixture.registered_events
+                )
+                response = client.execute(
+                    fixture.mutation_string,
+                    variable_values=dict(
+                        registerWebhooksInput=dict(
+                            connectorKey=str(fixture.connector_key),
+                            repositoryKeys=[str(fixture.repository_key)]
+                        )
+                    )
+                )
+                assert 'data' in response
+                status = response['data']['registerRepositoriesConnectorWebhooks']['webhooksRegistrationStatus']
+                assert len(status) == 1
+                assert status[0]['success']
+
+                assert db.connection().execute(
+                    f"select count(*) from repos.repositories \
+                                where key='{fixture.repository_key}' \
+                                and polling=false \
+                                and source_data->>'active_webhook'='{fixture.active_hook_id}'" \
+                    ).scalar() == 1
+
+            with patch(
+                    'polaris.vcs.integrations.gitlab.GitlabRepositoriesConnector.register_repository_webhooks') as register_webhooks:
+                register_webhooks.return_value = dict(
+                    active_webhook=new_webhook_id,
+                    deleted_webhooks=[fixture.active_hook_id],
+                    registered_events=fixture.registered_events
+                )
+                response = client.execute(
+                    fixture.mutation_string,
+                    variable_values=dict(
+                        registerWebhooksInput=dict(
+                            connectorKey=str(fixture.connector_key),
+                            repositoryKeys=[str(fixture.repository_key)]
+                        )
+                    )
+                )
+                assert 'data' in response
+                status = response['data']['registerRepositoriesConnectorWebhooks']['webhooksRegistrationStatus']
+                assert len(status) == 1
+                assert status[0]['success']
+
+                assert db.connection().execute(
+                    f"select count(*) from repos.repositories \
+                                where key='{fixture.repository_key}' \
+                                and polling=false \
+                                and source_data->>'active_webhook'='{new_webhook_id}' \
+                                and source_data->>'inactive_webhooks'='[]'" \
+                    ).scalar() == 1
+
+        def it_returns_connector_not_found_when_connector_id_is_incorrect(self, setup):
+            fixture = setup
+            client = Client(schema)
+            test_connector_key = str(uuid.uuid4())
+            with patch(
+                    'polaris.vcs.integrations.gitlab.GitlabRepositoriesConnector.register_repository_webhooks') as register_webhooks:
+                register_webhooks.return_value = dict(
+                    active_webhook=fixture.active_hook_id,
+                    deleted_webhooks=[],
+                    registered_events=fixture.registered_events
+                )
+                response = client.execute(
+                    fixture.mutation_string,
+                    variable_values=dict(
+                        registerWebhooksInput=dict(
+                            connectorKey=test_connector_key,
+                            repositoryKeys=[str(fixture.repository_key)]
+                        )
+                    )
+                )
+                assert 'data' in response
+                status = response['data']['registerRepositoriesConnectorWebhooks']['webhooksRegistrationStatus']
+                assert len(status) == 1
+                assert not status[0]['success']
+                assert status[0]['errorMessage'] == f"Register webhooks failed due to: Cannot find connector for connector_key {test_connector_key}"
+
+        def it_returns_repository_not_found_error_when_repository_id_is_incorrect(self, setup):
+            fixture = setup
+            client = Client(schema)
+            test_repo_key = str(uuid.uuid4())
+            with patch(
+                    'polaris.vcs.integrations.gitlab.GitlabRepositoriesConnector.register_repository_webhooks') as register_webhooks:
+                register_webhooks.return_value = dict(
+                    active_webhook=fixture.active_hook_id,
+                    deleted_webhooks=[],
+                    registered_events=fixture.registered_events
+                )
+                response = client.execute(
+                    fixture.mutation_string,
+                    variable_values=dict(
+                        registerWebhooksInput=dict(
+                            connectorKey=str(fixture.connector_key),
+                            repositoryKeys=[str(test_repo_key)]
+                        )
+                    )
+                )
+                assert 'data' in response
+                status = response['data']['registerRepositoriesConnectorWebhooks']['webhooksRegistrationStatus']
+                assert len(status) == 1
+                assert not status[0]['success']
+                assert status[0]['errorMessage'] == f"Could not find repository with key {test_repo_key}"
+
 

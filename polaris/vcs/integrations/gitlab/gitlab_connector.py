@@ -47,6 +47,17 @@ class GitlabRepositoriesConnector(GitlabConnector):
         )
 
     def register_repository_webhooks(self, repo_source_id, registered_webhooks):
+        # Delete the inactive hooks. Add all to deleted_hook_ids as either it is successfully deleted or \
+        # we are storing some old id which is no longer present
+        deleted_hook_ids = []
+        for inactive_hook_id in registered_webhooks:
+            if self.delete_repository_webhook(repo_source_id, inactive_hook_id):
+                logger.info(f"Deleted webhook with id {inactive_hook_id} for repo {repo_source_id}")
+            else:
+                logger.info(f"Webhook with id {inactive_hook_id} for repo {repo_source_id} does not exist")
+            deleted_hook_ids.append(inactive_hook_id)
+
+        # Register new webhook now
         repository_webhooks_callback_url = f"{config_provider.get('GITLAB_WEBHOOKS_BASE_URL')}" \
                                           f"/repository/webhooks/{self.key}/"
 
@@ -77,21 +88,9 @@ class GitlabRepositoriesConnector(GitlabConnector):
                 f'{response.status_code} {response.text}'
             )
 
-        # Check for all available hooks
-        available_hooks = self.get_available_webhooks(repo_source_id)
-        available_hooks.remove(active_hook_id)
-
-        deleted_hook_ids = set(registered_webhooks) - set(available_hooks)
-
-        # Delete old hooks if any
-        if registered_webhooks or available_hooks:
-            hooks_to_delete = set(available_hooks).union(set(available_hooks) - set(registered_webhooks))
-            for inactive_hook_id in hooks_to_delete:
-                if self.delete_repository_webhook(repo_source_id, inactive_hook_id):
-                    deleted_hook_ids.add(inactive_hook_id)
         return dict(
             active_webhook=active_hook_id,
-            deleted_webhooks=list(deleted_hook_ids),
+            deleted_webhooks=deleted_hook_ids,
             registered_events=self.webhook_events
         )
 
@@ -109,17 +108,12 @@ class GitlabRepositoriesConnector(GitlabConnector):
             return available_hooks
 
     def delete_repository_webhook(self, repo_source_id, inactive_hook_id):
-        # Check for available hooks first. Delete all apart from the active hook
-
         delete_hook_url = f"{self.base_url}/projects/{repo_source_id}/hooks/{inactive_hook_id}"
         response = requests.delete(
             delete_hook_url,
             headers={"Authorization": f"Bearer {self.personal_access_token}"}
         )
         if response.ok:
-            # result = response.json()
-            # if result.get('hook_id') is None:
-            # logger.info("The hook does not exist")
             return True
         else:
             logger.info(
