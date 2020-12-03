@@ -104,12 +104,15 @@ def import_repositories(organization_key, connector_key, repository_keys):
         result = api.import_repositories(organization_key, repository_keys)
         if result['success']:
             imported_repositories = result['repositories']
-            # FIXME: Shall we fail when even one repository webhook registration fails? OR just log error and continue?
             for repo in imported_repositories:
                 register_webhooks_result = register_repository_webhooks(connector_key, repo['key'], join_this=session)
                 if not register_webhooks_result['success']:
-                    raise ProcessingException(
-                        f"Import repositories failed: {register_webhooks_result.get('exception')}")
+                    # we dont raise an error when register_web_hook repositories fails.
+                    # worst case we should fall back on polling for these, and
+                    # we can always go back try re-registering webhooks for them using the mutation. 
+                    log.error(
+                        f"Import repositories failed: {register_webhooks_result.get('exception')}"
+                    )
             publish.repositories_imported(organization_key, imported_repositories)
             return result['repositories']
         else:
