@@ -53,9 +53,10 @@ class GitlabRepositoriesConnector(GitlabConnector):
         for inactive_hook_id in registered_webhooks:
             if self.delete_repository_webhook(repo_source_id, inactive_hook_id):
                 logger.info(f"Deleted webhook with id {inactive_hook_id} for repo {repo_source_id}")
+                deleted_hook_ids.append(inactive_hook_id)
             else:
-                logger.info(f"Webhook with id {inactive_hook_id} for repo {repo_source_id} does not exist")
-            deleted_hook_ids.append(inactive_hook_id)
+                logger.info(f"Webhook with id {inactive_hook_id} for repo {repo_source_id} could not be deleted")
+
 
         # Register new webhook now
         repository_webhooks_callback_url = f"{config_provider.get('GITLAB_WEBHOOKS_BASE_URL')}" \
@@ -113,7 +114,8 @@ class GitlabRepositoriesConnector(GitlabConnector):
             delete_hook_url,
             headers={"Authorization": f"Bearer {self.personal_access_token}"}
         )
-        if response.ok:
+        if response.ok or response.status_code==404:
+            # Case when hook was already non-existent or deleted successfully
             return True
         else:
             logger.info(
