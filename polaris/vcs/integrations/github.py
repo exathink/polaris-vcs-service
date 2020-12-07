@@ -10,12 +10,14 @@
 
 import logging
 from datetime import datetime, timedelta
+from github import GithubException
+from polaris.utils.config import get_config_provider
 from polaris.integrations.github import GithubConnector
 from polaris.utils.exceptions import ProcessingException
 from polaris.common.enums import VcsIntegrationTypes, GithubPullRequestState
 
 logger = logging.getLogger('polaris.vcs.integrations.github')
-
+config_provider = get_config_provider()
 
 class GithubRepositoriesConnector(GithubConnector):
 
@@ -56,6 +58,54 @@ class GithubRepositoriesConnector(GithubConnector):
                 for repo in repos_paginator._fetchNextPage()
                 if not repo.archived
             ]
+
+    def register_repository_webhooks(self, repo_source_id, registered_webhooks):
+        deleted_hook_ids = []
+        if self.access_token is not None:
+            github = self.get_github_client()
+            repo = github.get_repo(int(repo_source_id))
+            repository_webhooks_callback_url = f"https://exathinkdev.ngrok.io/github/repository/webhooks/{self.key}/"
+            try:
+                new_webhook = repo.create_hook(
+                    name='web',
+                    config=dict(
+                        url=repository_webhooks_callback_url,
+                        content_type="json",
+                        insecure_ssl="0"
+                    ),
+                    events=[
+                            "push",
+                            "pull_request"
+                        ],
+                    active=True,
+                )
+                active_hook_id=new_webhook.id
+            except GithubException as e:
+                logging.info(f"Webhook registration failed due to: {e.data['errors']}")
+                if e.status == 422:
+                    # Webhook is already registered on this repo
+                    # FIXME: Getting the registered webhook in case there is already an existing one. Fix the method.
+                    active_hook_id=self.get_active_hook(repo_source_id, repository_webhooks_callback_url)
+            return dict(
+                active_webhook=active_hook_id,
+                deleted_webhooks=deleted_hook_ids,
+                registered_events=["push", "pull_request"]
+            )
+
+    def get_active_hook(self, repo_source_id, repository_webhooks_callback_url):
+        github = self.get_github_client()
+        repo = github.get_repo(int(repo_source_id))
+        hooks_iterator = repo.get_hooks()
+        while hooks_iterator._couldGrow():
+            for hook in hooks_iterator._fetchNextPage():
+                #return hook
+                if hook.url==repository_webhooks_callback_url and hook.events==['push', 'pull_requests']:
+                    yield hook
+
+    def delete_repository_webhook(self, repo_source_id, inactive_hook_id):
+        github = self.get_github_client()
+        repo = github.get_repo(int(repo_source_id))
+        # FIXME: Can't find delete_hook method in github library
 
 
 class PolarisGithubRepository:
