@@ -12,7 +12,7 @@ import logging
 from polaris.common.enums import VcsIntegrationTypes
 from polaris.utils.exceptions import ProcessingException
 from polaris.vcs.integrations.gitlab import GitlabRepository
-from polaris.vcs.integrations.github import GithubRepository
+from polaris.vcs.integrations.github.github_connector import GithubRepository
 from polaris.vcs.integrations.atlassian import BitBucketRepository
 from polaris.common import db
 from polaris.repos.db.model import Repository

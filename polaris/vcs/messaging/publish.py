@@ -73,6 +73,22 @@ def gitlab_repository_event(event_type, connector_key, payload, channel=None):
     return message
 
 
+def github_repository_event(event_type, connector_key, payload, channel=None):
+    message = GitlabRepositoryEvent(
+        send=dict(
+            event_type=event_type,
+            connector_key=connector_key,
+            payload=payload
+        )
+    )
+    publish(
+        VcsTopic,
+        message,
+        channel=channel
+    )
+    return message
+
+
 def remote_repository_push_event(connector_key, repository_source_id, channel=None):
     message = RemoteRepositoryPushEvent(
         send=dict(
