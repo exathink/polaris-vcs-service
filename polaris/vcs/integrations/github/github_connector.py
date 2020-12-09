@@ -76,9 +76,9 @@ class GithubRepositoriesConnector(GithubConnector):
             active_hook_id = None
             github = self.get_github_client()
             repo = github.get_repo(int(repo_source_id))
-            # FIXME: Hardcoding the url as config_provider is returning None
-            # repository_webhooks_callback_url = f"{config_provider.get('GITHUB_WEBHOOKS_BASE_URL')}/repository/webhooks/{self.key}/"
-            repository_webhooks_callback_url = f"https://exathinkdev.ngrok.io/github/repository/webhooks/{self.key}/"
+
+            repository_webhooks_callback_url = f"{config_provider.get('GITHUB_WEBHOOKS_BASE_URL')}/repository/webhooks/{self.key}/"
+
             try:
                 new_webhook = repo.create_hook(
                     name='web',
