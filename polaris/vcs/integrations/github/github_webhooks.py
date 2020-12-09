@@ -8,6 +8,7 @@
 
 # Author: Pragya Goyal
 
+import json
 import logging
 from flask import Blueprint, request
 from polaris.vcs.messaging import publish
@@ -23,12 +24,12 @@ def repository_webhook(connector_key):
     req_data = request.json
     if req_data is not None:
         event_type = None
-        if req_data.get('refs'):
+        if req_data.get('ref'):
             event_type = 'push'
         if req_data.get('pull_request'):
             event_type = 'pull_request'
 
         if event_type is not None:
-            publish.github_repository_event(event_type, connector_key, req_data)
+            publish.github_repository_event(event_type, connector_key, json.dumps(req_data))
 
     return ''

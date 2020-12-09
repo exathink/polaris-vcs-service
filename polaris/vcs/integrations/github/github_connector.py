@@ -19,6 +19,7 @@ from polaris.common.enums import VcsIntegrationTypes, GithubPullRequestState
 logger = logging.getLogger('polaris.vcs.integrations.github')
 config_provider = get_config_provider()
 
+
 class GithubRepositoriesConnector(GithubConnector):
 
     def __init__(self, connector):
@@ -76,7 +77,7 @@ class GithubRepositoriesConnector(GithubConnector):
             github = self.get_github_client()
             repo = github.get_repo(int(repo_source_id))
             # FIXME: Hardcoding the url as config_provider is returning None
-            #repository_webhooks_callback_url = f"{config_provider.get('GITHUB_WEBHOOKS_BASE_URL')}/repository/webhooks/{self.key}/"
+            # repository_webhooks_callback_url = f"{config_provider.get('GITHUB_WEBHOOKS_BASE_URL')}/repository/webhooks/{self.key}/"
             repository_webhooks_callback_url = f"https://exathinkdev.ngrok.io/github/repository/webhooks/{self.key}/"
             try:
                 new_webhook = repo.create_hook(
@@ -89,7 +90,7 @@ class GithubRepositoriesConnector(GithubConnector):
                     events=self.webhook_events,
                     active=True,
                 )
-                active_hook_id=new_webhook.id
+                active_hook_id = new_webhook.id
             except GithubException as e:
                 logging.info(f"Webhook registration failed due to: {e.data['errors']}")
             except:
@@ -123,6 +124,8 @@ class PolarisGithubRepository:
 
 # FIXME: Hardcoded value for initial import days
 INITIAL_IMPORT_DAYS = 90
+
+
 class GithubRepository(PolarisGithubRepository):
 
     def __init__(self, repository, connector):
@@ -130,7 +133,7 @@ class GithubRepository(PolarisGithubRepository):
         self.source_repo_id = repository.source_id
         self.last_updated = repository.latest_pull_request_update_timestamp \
             if repository.latest_pull_request_update_timestamp is not None \
-            else datetime.utcnow()-timedelta(days=INITIAL_IMPORT_DAYS)
+            else datetime.utcnow() - timedelta(days=INITIAL_IMPORT_DAYS)
         self.connector = connector
         self.access_token = connector.access_token
         self.state_mapping = dict(
@@ -152,9 +155,11 @@ class GithubRepository(PolarisGithubRepository):
             title=pull_request.title,
             description=pull_request.body,
             source_state=pull_request.state,
-            state=self.state_mapping['merged'] if pull_request.merged_at is not None else self.state_mapping[pull_request.state],
+            state=self.state_mapping['merged'] if pull_request.merged_at is not None else self.state_mapping[
+                pull_request.state],
             source_created_at=pull_request.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-            source_last_updated=pull_request.updated_at.strftime("%Y-%m-%d %H:%M:%S") if pull_request.updated_at else None,
+            source_last_updated=pull_request.updated_at.strftime(
+                "%Y-%m-%d %H:%M:%S") if pull_request.updated_at else None,
             # TODO: Figure out how to determine merge status.
             source_merge_status=None,
             source_merged_at=pull_request.merged_at.strftime("%Y-%m-%d %H:%M:%S") if pull_request.merged_at else None,
@@ -189,5 +194,3 @@ class GithubRepository(PolarisGithubRepository):
                     else:
                         pull_requests.append(self.map_pull_request_info(pr))
                 yield pull_requests
-
-
