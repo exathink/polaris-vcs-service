@@ -19,6 +19,7 @@ from polaris.messaging.topics import WorkItemsTopic, ConnectorsTopic
 from polaris.messaging.utils import init_topics_to_publish
 from polaris.vcs.integrations.atlassian import bitbucket_atlassian_connect
 from polaris.vcs.integrations.gitlab import gitlab_webhooks
+from polaris.vcs.integrations.github import github_webhooks
 from polaris.vcs.service import graphql
 
 
@@ -52,6 +53,7 @@ if config_provider.get('DEBUG_SQL') == 'true':
 # Register endpoints
 app.register_blueprint(gql.api, url_prefix='/graphql', schema=graphql.schema)
 app.register_blueprint(gitlab_webhooks.webhook, url_prefix='/gitlab')
+app.register_blueprint(github_webhooks.webhook, url_prefix='/github')
 
 bitbucket_atlassian_connect.init_connector(app)
 
