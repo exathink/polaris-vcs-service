@@ -37,8 +37,7 @@ class TestGitlabWebhookEvents:
         def setup(self, setup_sync_repos_gitlab):
             organization_key, connectors = setup_sync_repos_gitlab
             connector_key = gitlab_connector_key
-            event_type = 'merge_request' \
-                         ''
+            event_type = 'merge_request'
             yield Fixture(
                 organization_key=organization_key,
                 connector_key=connector_key,

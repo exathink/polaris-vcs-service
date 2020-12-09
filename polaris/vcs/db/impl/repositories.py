@@ -187,7 +187,8 @@ def register_webhooks(session, repository_key, webhook_info):
         if source_data.get('webhooks'):
             del source_data['webhooks']
         repo.source_data = source_data
-        if 'push_events' in webhook_info['registered_events']:
+        # TODO: Create a common mapping for events for all vcs types
+        if 'push_events' in webhook_info['registered_events'] or 'push' in webhook_info['registered_events']:
             repo.polling = False
     else:
         raise ProcessingException(f"Could not find repository with key {repository_key}")
