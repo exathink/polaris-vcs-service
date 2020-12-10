@@ -20,7 +20,10 @@ from polaris.utils.collections import DictToObj
 
 
 def handle_github_repository_push(connector_key, payload, channel=None):
-    pass
+    event = json.loads(payload)
+    repo_source_id = str(event.get('repository')['id'])
+
+    publish.remote_repository_push_event(connector_key, repo_source_id, channel)
 
 
 def handle_github_pull_request_event(connector_key, payload, channel=None):
