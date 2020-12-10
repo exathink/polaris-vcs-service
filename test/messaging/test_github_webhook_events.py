@@ -21,7 +21,7 @@ from polaris.messaging.test_utils import fake_send, mock_publisher, mock_channel
 
 from polaris.messaging.topics import VcsTopic
 from polaris.messaging.messages import PullRequestsCreated, PullRequestsUpdated
-from polaris.vcs.messaging.messages import GithubRepositoryEvent
+from polaris.vcs.messaging.messages import GithubRepositoryEvent, RemoteRepositoryPushEvent
 from polaris.vcs.messaging.message_listener import VcsTopicSubscriber
 
 mock_consumer = MagicMock(MessageConsumer)
@@ -830,3 +830,44 @@ class TestGithubWebhookEvents:
                                                 and source_repository_source_id='{source_repo_id}' \
                                                 and state='merged'").scalar() == 1
                         assert_topic_and_message(publish, VcsTopic, PullRequestsUpdated)
+
+    class TestGithubRepoPushEvent:
+
+        @pytest.yield_fixture()
+        def setup(self, setup_sync_repos):
+            organization_key, connectors = setup_sync_repos
+            connector_key = github_connector_key
+            event_type = 'push'
+            payload = {
+                "ref": "refs/heads/master",
+                "before": "126ef38c5dd27f637de1d6f8bdd573737d2bf20f",
+                "after": "2e85ab0334abe37977f7c51b09cc4b8f8cae0764",
+                "repository": {
+                    "id": int(test_repository_source_id)
+                }
+            }
+            yield Fixture(
+                organization_key=organization_key,
+                connector_key=connector_key,
+                event_type=event_type,
+                payload=payload
+            )
+
+        def it_publishes_remote_repository_push_event(self, setup):
+            fixture = setup
+            github_repo_push_message = fake_send(
+                GithubRepositoryEvent(
+                    send=dict(
+                        event_type=fixture.event_type,
+                        connector_key=fixture.connector_key,
+                        payload=json.dumps(fixture.payload)
+                    )
+                )
+            )
+            publisher = mock_publisher()
+
+            with patch('polaris.vcs.messaging.publish.publish') as publish:
+                subscriber = VcsTopicSubscriber(mock_channel(), publisher=publisher)
+                subscriber.consumer_context = mock_consumer
+                subscriber.dispatch(mock_channel(), github_repo_push_message)
+                assert_topic_and_message(publish, VcsTopic, RemoteRepositoryPushEvent)
