@@ -10,17 +10,21 @@
 
 import logging
 from datetime import datetime, timedelta
+from github import GithubException
+from polaris.utils.config import get_config_provider
 from polaris.integrations.github import GithubConnector
 from polaris.utils.exceptions import ProcessingException
 from polaris.common.enums import VcsIntegrationTypes, GithubPullRequestState
 
 logger = logging.getLogger('polaris.vcs.integrations.github')
+config_provider = get_config_provider()
 
 
 class GithubRepositoriesConnector(GithubConnector):
 
     def __init__(self, connector):
         super().__init__(connector)
+        self.webhook_events = ['push', 'pull_request']
 
     def map_repository_info(self, repo):
         return dict(
@@ -57,6 +61,56 @@ class GithubRepositoriesConnector(GithubConnector):
                 if not repo.archived
             ]
 
+    def register_repository_webhooks(self, repo_source_id, registered_webhooks):
+        if self.access_token is not None:
+            # Delete existing/registered webhook before registering new
+            deleted_hook_ids = []
+            for inactive_hook_id in registered_webhooks:
+                if self.delete_repository_webhook(repo_source_id, inactive_hook_id):
+                    logger.info(f"Deleted webhook with id {inactive_hook_id} for source repo {repo_source_id}")
+                    deleted_hook_ids.append(inactive_hook_id)
+                else:
+                    logger.info(f"Webhook with id {inactive_hook_id} for repo {repo_source_id} could not be deleted")
+
+            # register new hook
+            active_hook_id = None
+            github = self.get_github_client()
+            repo = github.get_repo(int(repo_source_id))
+
+            repository_webhooks_callback_url = f"{config_provider.get('GITHUB_WEBHOOKS_BASE_URL')}/repository/webhooks/{self.key}/"
+
+            try:
+                new_webhook = repo.create_hook(
+                    name='web',
+                    config=dict(
+                        url=repository_webhooks_callback_url,
+                        content_type="json",
+                        insecure_ssl="0"
+                    ),
+                    events=self.webhook_events,
+                    active=True,
+                )
+                active_hook_id = new_webhook.id
+            except GithubException as e:
+                logging.info(f"Webhook registration failed due to: {e.data['errors']}")
+            except:
+                logging.info(f"Webhook registration failed for repo with source id {repo_source_id}")
+            return dict(
+                active_webhook=active_hook_id,
+                deleted_webhooks=deleted_hook_ids,
+                registered_events=self.webhook_events
+            )
+
+    def delete_repository_webhook(self, repo_source_id, inactive_hook_id):
+        github = self.get_github_client()
+        repo = github.get_repo(int(repo_source_id))
+        try:
+            hook = repo.get_hook(inactive_hook_id)
+            hook.delete()
+            return True
+        except:
+            logging.info(f"Could not delete webhook {inactive_hook_id} for repo {repo_source_id}")
+
 
 class PolarisGithubRepository:
 
@@ -70,6 +124,8 @@ class PolarisGithubRepository:
 
 # FIXME: Hardcoded value for initial import days
 INITIAL_IMPORT_DAYS = 90
+
+
 class GithubRepository(PolarisGithubRepository):
 
     def __init__(self, repository, connector):
@@ -77,7 +133,7 @@ class GithubRepository(PolarisGithubRepository):
         self.source_repo_id = repository.source_id
         self.last_updated = repository.latest_pull_request_update_timestamp \
             if repository.latest_pull_request_update_timestamp is not None \
-            else datetime.utcnow()-timedelta(days=INITIAL_IMPORT_DAYS)
+            else datetime.utcnow() - timedelta(days=INITIAL_IMPORT_DAYS)
         self.connector = connector
         self.access_token = connector.access_token
         self.state_mapping = dict(
@@ -99,9 +155,11 @@ class GithubRepository(PolarisGithubRepository):
             title=pull_request.title,
             description=pull_request.body,
             source_state=pull_request.state,
-            state=self.state_mapping['merged'] if pull_request.merged_at is not None else self.state_mapping[pull_request.state],
+            state=self.state_mapping['merged'] if pull_request.merged_at is not None else self.state_mapping[
+                pull_request.state],
             source_created_at=pull_request.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-            source_last_updated=pull_request.updated_at.strftime("%Y-%m-%d %H:%M:%S") if pull_request.updated_at else None,
+            source_last_updated=pull_request.updated_at.strftime(
+                "%Y-%m-%d %H:%M:%S") if pull_request.updated_at else None,
             # TODO: Figure out how to determine merge status.
             source_merge_status=None,
             source_merged_at=pull_request.merged_at.strftime("%Y-%m-%d %H:%M:%S") if pull_request.merged_at else None,
@@ -136,5 +194,3 @@ class GithubRepository(PolarisGithubRepository):
                     else:
                         pull_requests.append(self.map_pull_request_info(pr))
                 yield pull_requests
-
-

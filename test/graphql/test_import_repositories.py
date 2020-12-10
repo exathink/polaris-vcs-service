@@ -23,20 +23,27 @@ class TestImportRepositoriesMutation:
         client = Client(schema)
 
         with patch('polaris.vcs.messaging.publish.publish'):
-            response = client.execute("""
-                mutation importRepositories($importRepositoriesInput: ImportRepositoriesInput!) {
-                    importRepositories(importRepositoriesInput: $importRepositoriesInput) {
-                        success
-                        importedRepositoryKeys
-                    }
-                }
-            """, variable_values=dict(
-                importRepositoriesInput=dict(
-                    connectorKey=str(connectors['github']),
-                    organizationKey=str(organization_key),
-                    repositoryKeys=[str(repository_key)]
+            with patch(
+                    'polaris.vcs.integrations.github.GithubRepositoriesConnector.register_repository_webhooks') as register_webhooks:
+                register_webhooks.return_value = dict(
+                    active_webhook="1000",
+                    deleted_webhooks=[],
+                    registered_events=['push', 'pull_request']
                 )
-            ))
+                response = client.execute("""
+                    mutation importRepositories($importRepositoriesInput: ImportRepositoriesInput!) {
+                        importRepositories(importRepositoriesInput: $importRepositoriesInput) {
+                            success
+                            importedRepositoryKeys
+                        }
+                    }
+                """, variable_values=dict(
+                    importRepositoriesInput=dict(
+                        connectorKey=str(connectors['github']),
+                        organizationKey=str(organization_key),
+                        repositoryKeys=[str(repository_key)]
+                    )
+                ))
 
         assert response['data']
         assert response['data']['importRepositories']['success']
