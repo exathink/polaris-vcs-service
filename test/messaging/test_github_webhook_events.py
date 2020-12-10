@@ -828,5 +828,5 @@ class TestGithubWebhookEvents:
                             f"select count(id) from repos.pull_requests \
                                                 where source_id='{source_pr_id}' \
                                                 and source_repository_source_id='{source_repo_id}' \
-                                                and state='closed'").scalar() == 1
+                                                and state='merged'").scalar() == 1
                         assert_topic_and_message(publish, VcsTopic, PullRequestsUpdated)
