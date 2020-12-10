@@ -92,9 +92,9 @@ class GithubRepositoriesConnector(GithubConnector):
                 )
                 active_hook_id = new_webhook.id
             except GithubException as e:
-                logging.info(f"Webhook registration failed due to: {e.data['errors']}")
+                logger.error(f"Webhook registration failed due to: {e.data['errors']}")
             except:
-                logging.info(f"Webhook registration failed for repo with source id {repo_source_id}")
+                logger.error(f"Webhook registration failed for repo with source id {repo_source_id}")
             return dict(
                 active_webhook=active_hook_id,
                 deleted_webhooks=deleted_hook_ids,
