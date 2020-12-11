@@ -50,6 +50,8 @@ class GitlabRepositoriesConnector(GitlabConnector):
         # Delete the inactive hooks. Add all to deleted_hook_ids as either it is successfully deleted or \
         # we are storing some old id which is no longer present
         deleted_hook_ids = []
+        active_hook_id = None
+        error_message = None
         for inactive_hook_id in registered_webhooks:
             if self.delete_repository_webhook(repo_source_id, inactive_hook_id):
                 logger.info(f"Deleted webhook with id {inactive_hook_id} for repo {repo_source_id}")
@@ -57,10 +59,9 @@ class GitlabRepositoriesConnector(GitlabConnector):
             else:
                 logger.info(f"Webhook with id {inactive_hook_id} for repo {repo_source_id} could not be deleted")
 
-
         # Register new webhook now
         repository_webhooks_callback_url = f"{config_provider.get('GITLAB_WEBHOOKS_BASE_URL')}" \
-                                          f"/repository/webhooks/{self.key}/"
+                                           f"/repository/webhooks/{self.key}/"
 
         add_hook_url = f"{self.base_url}/projects/{repo_source_id}/hooks"
 
@@ -84,15 +85,14 @@ class GitlabRepositoriesConnector(GitlabConnector):
             result = response.json()
             active_hook_id = result['id']
         else:
-            raise ProcessingException(
-                f"Failed to register repository webhooks for repository with source id: ({repo_source_id})"
-                f'{response.status_code} {response.text}'
-            )
+            error_message = f"Webhook registration failed due to status:{response.status_code} message:{response.text}"
+            logger.error(error_message)
 
         return dict(
             active_webhook=active_hook_id,
             deleted_webhooks=deleted_hook_ids,
-            registered_events=self.webhook_events
+            registered_events=self.webhook_events,
+            error_message=error_message
         )
 
     def get_available_webhooks(self, repo_source_id):
@@ -114,7 +114,7 @@ class GitlabRepositoriesConnector(GitlabConnector):
             delete_hook_url,
             headers={"Authorization": f"Bearer {self.personal_access_token}"}
         )
-        if response.ok or response.status_code==404:
+        if response.ok or response.status_code == 404:
             # Case when hook was already non-existent or deleted successfully
             return True
         else:

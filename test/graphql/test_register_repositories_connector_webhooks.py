@@ -35,7 +35,7 @@ class TestRegisterRepositoriesConnectorWebhooks:
                     webhooksRegistrationStatus {
                       repositoryKey
                       success
-                      errorMessage
+                      message
                     }
                   }
                 }
@@ -165,7 +165,7 @@ class TestRegisterRepositoriesConnectorWebhooks:
                 status = response['data']['registerRepositoriesConnectorWebhooks']['webhooksRegistrationStatus']
                 assert len(status) == 1
                 assert not status[0]['success']
-                assert status[0]['errorMessage'] == f"Register webhooks failed due to: Cannot find connector for connector_key {test_connector_key}"
+                assert status[0]['message'] == f"Register webhooks failed due to: Cannot find connector for connector_key {test_connector_key}"
 
         def it_returns_repository_not_found_error_when_repository_id_is_incorrect(self, setup):
             fixture = setup
@@ -191,7 +191,7 @@ class TestRegisterRepositoriesConnectorWebhooks:
                 status = response['data']['registerRepositoriesConnectorWebhooks']['webhooksRegistrationStatus']
                 assert len(status) == 1
                 assert not status[0]['success']
-                assert status[0]['errorMessage'] == f"Could not find repository with key {test_repo_key}"
+                assert status[0]['message'] == f"Could not find repository with key {test_repo_key}"
 
 
     class TestWithGithubConnector:
@@ -208,7 +208,7 @@ class TestRegisterRepositoriesConnectorWebhooks:
                             webhooksRegistrationStatus {
                               repositoryKey
                               success
-                              errorMessage
+                              message
                             }
                           }
                         }
