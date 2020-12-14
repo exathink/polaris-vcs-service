@@ -50,8 +50,6 @@ class GitlabRepositoriesConnector(GitlabConnector):
         # Delete the inactive hooks. Add all to deleted_hook_ids as either it is successfully deleted or \
         # we are storing some old id which is no longer present
         deleted_hook_ids = []
-        active_hook_id = None
-        error_message = None
         for inactive_hook_id in registered_webhooks:
             if self.delete_repository_webhook(repo_source_id, inactive_hook_id):
                 logger.info(f"Deleted webhook with id {inactive_hook_id} for repo {repo_source_id}")
@@ -85,14 +83,13 @@ class GitlabRepositoriesConnector(GitlabConnector):
             result = response.json()
             active_hook_id = result['id']
         else:
-            error_message = f"Webhook registration failed due to status:{response.status_code} message:{response.text}"
-            logger.error(error_message)
-
+            raise ProcessingException(
+                f"Webhook registration failed due to status:{response.status_code} message:{response.text}")
         return dict(
+            success=True,
             active_webhook=active_hook_id,
             deleted_webhooks=deleted_hook_ids,
             registered_events=self.webhook_events,
-            error_message=error_message
         )
 
     def get_available_webhooks(self, repo_source_id):

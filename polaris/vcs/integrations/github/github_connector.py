@@ -73,8 +73,6 @@ class GithubRepositoriesConnector(GithubConnector):
                     logger.info(f"Webhook with id {inactive_hook_id} for repo {repo_source_id} could not be deleted")
 
             # register new hook
-            active_hook_id = None
-            error_message = None
             github = self.get_github_client()
             repo = github.get_repo(int(repo_source_id))
 
@@ -93,19 +91,15 @@ class GithubRepositoriesConnector(GithubConnector):
                 )
                 active_hook_id = new_webhook.id
             except GithubException as e:
-                error_message = f"Webhook registration failed due to: {e.data['errors']}"
                 # FIXME: In case we land into a scenario where we were not able to save the registered webhook id in db,
                 #  we may never be able to delete that and register new one.
                 #  To fix that we may need to make another API call here to get the active webhook id.
-                logger.error(error_message)
-            except:
-                error_message = f"Webhook registration failed for repo with source id {repo_source_id}"
-                logger.error(error_message)
+                raise ProcessingException(f"Webhook registration failed due to: {e.data['errors']}")
             return dict(
+                success=True,
                 active_webhook=active_hook_id,
                 deleted_webhooks=deleted_hook_ids,
                 registered_events=self.webhook_events,
-                error_message=error_message
             )
 
     def delete_repository_webhook(self, repo_source_id, inactive_hook_id):
