@@ -101,6 +101,8 @@ class GithubRepositoriesConnector(GithubConnector):
                 deleted_webhooks=deleted_hook_ids,
                 registered_events=self.webhook_events,
             )
+        else:
+            raise ProcessingException(f"Github Access Token is None")
 
     def delete_repository_webhook(self, repo_source_id, inactive_hook_id):
         github = self.get_github_client()
