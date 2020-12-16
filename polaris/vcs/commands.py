@@ -69,6 +69,8 @@ def register_repository_webhooks(connector_key, repository_key, join_this=None):
                                     success=True,
                                     repository_key=repository_key
                                 )
+                            else:
+                                return db.failure_message(f"Could not register webhook due to: {register_result.get('exception')}")
                 else:
                     return db.failure_message(f"Could not find repository with key {repository_key}")
             elif connector:
