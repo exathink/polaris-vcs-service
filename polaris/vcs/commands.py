@@ -58,17 +58,19 @@ def register_repository_webhooks(connector_key, repository_key, join_this=None):
             if connector and getattr(connector, 'register_repository_webhooks', None):
                 repo = Repository.find_by_repository_key(session, repository_key=repository_key)
                 if repo:
-                    try:
-                        registered_webhooks = api.get_registered_webhooks(repository_key, join_this=session)
-                        webhook_info = connector.register_repository_webhooks(repo.source_id, registered_webhooks)
-                        api.register_webhooks(repository_key, webhook_info, join_this=session)
-                        return dict(
-                            success=True,
-                            repository_key=repository_key
-                        )
-                    except ProcessingException as e:
-                        log.error(e)
-                        return db.failure_message(f"Register webhooks failed for repository with id {repo.id}")
+                    get_hooks_result = api.get_registered_webhooks(repository_key, join_this=session)
+                    if get_hooks_result['success']:
+                        webhook_info = connector.register_repository_webhooks(repo.source_id,
+                                                                              get_hooks_result['registered_webhooks'])
+                        if webhook_info['success']:
+                            register_result = api.register_webhooks(repository_key, webhook_info, join_this=session)
+                            if register_result['success']:
+                                return dict(
+                                    success=True,
+                                    repository_key=repository_key
+                                )
+                            else:
+                                return db.failure_message(f"Could not register webhook due to: {register_result.get('exception')}")
                 else:
                     return db.failure_message(f"Could not find repository with key {repository_key}")
             elif connector:
@@ -83,7 +85,6 @@ def register_repository_webhooks(connector_key, repository_key, join_this=None):
             return db.failure_message(f"Register webhooks failed due to: {e}")
 
 
-
 def register_repositories_webhooks(connector_key, repository_keys, join_this=None):
     result = []
     for repository_key in repository_keys:
@@ -94,7 +95,8 @@ def register_repositories_webhooks(connector_key, repository_keys, join_this=Non
             result.append(dict(
                 repository_key=repository_key,
                 success=False,
-                error_message=registration_status.get('message')
+                message=registration_status.get('message'),
+                exception=registration_status.get('exception')
             ))
     return result
 

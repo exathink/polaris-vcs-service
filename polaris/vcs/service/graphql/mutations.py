@@ -157,7 +157,8 @@ class RegisterWebhooksInput(graphene.InputObjectType):
 class WebhooksRegistrationStatus(graphene.ObjectType):
     repository_key = graphene.String(required=True)
     success = graphene.Boolean(required=True)
-    error_message = graphene.String(required=False)
+    message = graphene.String(required=False)
+    exception = graphene.String(required=False)
 
 
 class RegisterRepositoriesConnectorWebhooks(graphene.Mutation):
@@ -179,7 +180,8 @@ class RegisterRepositoriesConnectorWebhooks(graphene.Mutation):
                         WebhooksRegistrationStatus(
                             repository_key=status.get('repository_key'),
                             success=status.get('success'),
-                            error_message=status.get('error_message')
+                            message=status.get('message'),
+                            exception=status.get('exception')
                         )
-                    for status in result]
+                        for status in result]
                 )
