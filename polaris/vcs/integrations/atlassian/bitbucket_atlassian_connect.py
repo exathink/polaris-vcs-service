@@ -27,10 +27,6 @@ class BitBucketConnectorContext:
 
     app_name = "Polaris Flow Connector for BitBucket"
     addon_name = "Polaris Flow Connector for BitBucket"
-    addon_key = config_provider.get('BITBUCKET_CONNECTOR_APP_KEY')
-    if addon_key is None:
-        raise ConfigurationException("BITBUCKET_CONNECTOR_APP_KEY must be specified")
-
     addon_description = "Polaris Flow Connector for BitBucket"
     addon_scopes = ['repository', 'issue', 'pullrequest', 'webhook']
     addon_version = 1
