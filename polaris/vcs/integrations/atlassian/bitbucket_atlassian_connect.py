@@ -161,3 +161,76 @@ def init_connector(app):
             atlassian_event=event
         )
 
+    @ac.webhook("pullrequest:created")
+    def handle_pull_request_created(client, event):
+        log.info(f' pullrequest:created Event Received: {client.baseUrl} ({client.clientKey})')
+        publish.atlassian_connect_repository_event(
+            atlassian_connector_key=client.atlassianConnectorKey,
+            atlassian_event_type='pullrequest:created',
+            atlassian_event=event
+        )
+
+    @ac.webhook("pullrequest:updated")
+    def handle_pull_request_updated(client, event):
+        log.info(f' pullrequest:updated Event Received: {client.baseUrl} ({client.clientKey})')
+        publish.atlassian_connect_repository_event(
+            atlassian_connector_key=client.atlassianConnectorKey,
+            atlassian_event_type='pullrequest:updated',
+            atlassian_event=event
+        )
+
+    @ac.webhook("pullrequest:approved")
+    def handle_pull_request_approved(client, event):
+        log.info(f' pullrequest:approved Event Received: {client.baseUrl} ({client.clientKey})')
+        publish.atlassian_connect_repository_event(
+            atlassian_connector_key=client.atlassianConnectorKey,
+            atlassian_event_type='pullrequest:approved',
+            atlassian_event=event
+        )
+
+    @ac.webhook("pullrequest:unapproved")
+    def handle_pull_request_unapproved(client, event):
+        log.info(f' pullrequest:unapproved Event Received: {client.baseUrl} ({client.clientKey})')
+        publish.atlassian_connect_repository_event(
+            atlassian_connector_key=client.atlassianConnectorKey,
+            atlassian_event_type='pullrequest:unapproved',
+            atlassian_event=event
+        )
+
+    @ac.webhook("pullrequest:fulfilled")
+    def handle_pull_request_fulfilled(client, event):
+        log.info(f' pullrequest:fulfilled Event Received: {client.baseUrl} ({client.clientKey})')
+        publish.atlassian_connect_repository_event(
+            atlassian_connector_key=client.atlassianConnectorKey,
+            atlassian_event_type='pullrequest:fulfilled',
+            atlassian_event=event
+        )
+
+    @ac.webhook("pullrequest:rejected")
+    def handle_pull_request_rejected(client, event):
+        log.info(f' pullrequest:rejected Event Received: {client.baseUrl} ({client.clientKey})')
+        publish.atlassian_connect_repository_event(
+            atlassian_connector_key=client.atlassianConnectorKey,
+            atlassian_event_type='pullrequest:rejected',
+            atlassian_event=event
+        )
+
+    @ac.webhook("pullrequest:comment_created")
+    def handle_pull_request_comment_created(client, event):
+        log.info(f' pullrequest:comment_created Event Received: {client.baseUrl} ({client.clientKey})')
+        publish.atlassian_connect_repository_event(
+            atlassian_connector_key=client.atlassianConnectorKey,
+            atlassian_event_type='pullrequest:comment_created',
+            atlassian_event=event
+        )
+
+    @ac.webhook("pullrequest:comment_deleted")
+    def handle_pull_request_comment_deleted(client, event):
+        log.info(f' pullrequest:comment_deleted Event Received: {client.baseUrl} ({client.clientKey})')
+        publish.atlassian_connect_repository_event(
+            atlassian_connector_key=client.atlassianConnectorKey,
+            atlassian_event_type='pullrequest:comment_deleted',
+            atlassian_event=event
+        )
+
+
