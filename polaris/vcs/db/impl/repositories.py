@@ -26,86 +26,92 @@ log = logging.getLogger('polaris.vcs.db.impl.repositories')
 
 def sync_repositories(session, organization_key, connector_key, source_repositories):
     if organization_key is not None:
-        repositories_temp = db.temp_table_from(
-            repositories,
-            table_name='repositories_temp',
-            exclude_columns=[
-                repositories.c.id,
-                repositories.c.last_checked,
-                repositories.c.last_imported,
-                repositories.c.commit_count,
-                repositories.c.earliest_commit,
-                repositories.c.latest_commit,
-                repositories.c.failures_since_last_checked,
-                repositories.c.organization_id
-            ]
-        )
-        repositories_temp.create(session.connection(), checkfirst=True)
-        session.connection().execute(
-            repositories_temp.insert([
-                dict(
-                    key=uuid.uuid4(),
-                    organization_key=organization_key,
-                    connector_key=connector_key,
-                    import_state=RepositoryImportState.IMPORT_DISABLED,
-                    import_ready_state=RepositoryImportState.IMPORT_READY,
-                    update_ready_state=RepositoryImportState.UPDATE_READY,
-                    created_at=datetime.utcnow(),
-                    updated_at=datetime.utcnow(),
-                    source_data={},
-                    **source_repo
+        if len(source_repositories) > 0:
+            repositories_temp = db.temp_table_from(
+                repositories,
+                table_name='repositories_temp',
+                exclude_columns=[
+                    repositories.c.id,
+                    repositories.c.last_checked,
+                    repositories.c.last_imported,
+                    repositories.c.commit_count,
+                    repositories.c.earliest_commit,
+                    repositories.c.latest_commit,
+                    repositories.c.failures_since_last_checked,
+                    repositories.c.organization_id
+                ]
+            )
+            repositories_temp.create(session.connection(), checkfirst=True)
+            session.connection().execute(
+                repositories_temp.insert([
+                    dict(
+                        key=uuid.uuid4(),
+                        organization_key=organization_key,
+                        connector_key=connector_key,
+                        import_state=RepositoryImportState.IMPORT_DISABLED,
+                        import_ready_state=RepositoryImportState.IMPORT_READY,
+                        update_ready_state=RepositoryImportState.UPDATE_READY,
+                        created_at=datetime.utcnow(),
+                        updated_at=datetime.utcnow(),
+                        source_data={},
+                        **source_repo
+                    )
+                    for source_repo in source_repositories
+                ])
+            )
+            repositories_before_insert = session.connection().execute(
+                select([*repositories_temp.columns, repositories.c.key.label('current_key')]).select_from(
+                    repositories_temp.outerjoin(
+                        repositories,
+                        and_(
+                            repositories_temp.c.connector_key == repositories.c.connector_key,
+                            repositories_temp.c.source_id == repositories.c.source_id
+                        )
+                    )
                 )
-                for source_repo in source_repositories
-            ])
-        )
-        repositories_before_insert = session.connection().execute(
-            select([*repositories_temp.columns, repositories.c.key.label('current_key')]).select_from(
-                repositories_temp.outerjoin(
-                    repositories,
-                    and_(
-                        repositories_temp.c.connector_key == repositories.c.connector_key,
-                        repositories_temp.c.source_id == repositories.c.source_id
+            ).fetchall()
+
+            upsert = insert(repositories).from_select(
+                [column.name for column in repositories_temp.columns],
+                select([repositories_temp])
+            )
+
+            session.connection().execute(
+                upsert.on_conflict_do_update(
+                    index_elements=['connector_key', 'source_id'],
+                    set_=dict(
+                        name=upsert.excluded.name,
+                        description=upsert.excluded.description,
+                        url=upsert.excluded.url,
+                        public=upsert.excluded.public,
+                        properties=upsert.excluded.properties,
+                        updated_at=upsert.excluded.updated_at,
                     )
                 )
             )
-        ).fetchall()
 
-        upsert = insert(repositories).from_select(
-            [column.name for column in repositories_temp.columns],
-            select([repositories_temp])
-        )
-
-        session.connection().execute(
-            upsert.on_conflict_do_update(
-                index_elements=['connector_key', 'source_id'],
-                set_=dict(
-                    name=upsert.excluded.name,
-                    description=upsert.excluded.description,
-                    url=upsert.excluded.url,
-                    public=upsert.excluded.public,
-                    properties=upsert.excluded.properties,
-                    updated_at=upsert.excluded.updated_at,
-                )
+            return dict(
+                success=True,
+                repositories=[
+                    dict(
+                        is_new=repository.current_key is None,
+                        key=repository.key if repository.current_key is None else repository.current_key,
+                        connector_key=repository.connector_key,
+                        integration_type=repository.integration_type,
+                        source_id=repository.source_id,
+                        url=repository.url,
+                        name=repository.name,
+                        description=repository.description,
+                        public=repository.public,
+                        organization_key=organization_key,
+                    )
+                    for repository in repositories_before_insert
+                ])
+        else:
+            return dict(
+                success=True,
+                repositories=[]
             )
-        )
-
-        return dict(
-            success=True,
-            repositories=[
-                dict(
-                    is_new=repository.current_key is None,
-                    key=repository.key if repository.current_key is None else repository.current_key,
-                    connector_key=repository.connector_key,
-                    integration_type=repository.integration_type,
-                    source_id=repository.source_id,
-                    url=repository.url,
-                    name=repository.name,
-                    description=repository.description,
-                    public=repository.public,
-                    organization_key=organization_key,
-                )
-                for repository in repositories_before_insert
-            ])
 
     else:
         raise ProcessingException(f"Connector {connector_key} must specify an organization key "
@@ -190,6 +196,10 @@ def register_webhooks(session, repository_key, webhook_info):
         # TODO: Create a common mapping for events for all vcs types
         if 'push_events' in webhook_info['registered_events'] or 'push' in webhook_info['registered_events']:
             repo.polling = False
+        return dict(
+            success=True,
+            repository_key=repository_key
+        )
     else:
         raise ProcessingException(f"Could not find repository with key {repository_key}")
 
@@ -203,7 +213,11 @@ def get_registered_webhooks(session, repository_key):
         if source_data.get('active_webhook'):
             registered_webhooks.extend(source_data.get('inactive_webhooks', []))
             registered_webhooks.append(source_data.get('active_webhook'))
-        return registered_webhooks
+        return dict(
+            success=True,
+            repository_key=repository_key,
+            registered_webhooks=registered_webhooks
+        )
     else:
         raise ProcessingException(f"Could not find repository with key {repository_key}")
 

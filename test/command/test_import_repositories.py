@@ -27,6 +27,7 @@ class TestImportRepositories:
             with patch(
                     'polaris.vcs.integrations.github.GithubRepositoriesConnector.register_repository_webhooks') as register_webhooks:
                 register_webhooks.return_value = dict(
+                    success=True,
                     active_webhook='1000',
                     deleted_webhooks=[],
                     registered_events=['push', 'pull_request']
@@ -42,6 +43,7 @@ class TestImportRepositories:
             with patch(
                     'polaris.vcs.integrations.github.GithubRepositoriesConnector.register_repository_webhooks') as register_webhooks:
                 register_webhooks.return_value = dict(
+                    success=True,
                     active_webhook='1000',
                     deleted_webhooks=[],
                     registered_events=['push', 'pull_request']
