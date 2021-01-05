@@ -247,9 +247,9 @@ class TestAtlassianWebhookEvents:
                 channel = mock_channel()
 
                 with patch('polaris.vcs.messaging.publish.publish') as publish:
-                    subscriber = VcsTopicSubscriber(mock_channel(), publisher=publisher)
+                    subscriber = VcsTopicSubscriber(channel, publisher=publisher)
                     subscriber.consumer_context = mock_consumer
-                    message = subscriber.dispatch(mock_channel(), bitbucket_pull_request_message)
+                    message = subscriber.dispatch(channel, bitbucket_pull_request_message)
                     assert message
                     source_pr_id = str(fixture.new_payload['data']['pullrequest']['id'])
                     source_repo_id = str(test_repository_source_id)
@@ -514,17 +514,17 @@ class TestAtlassianWebhookEvents:
                     publisher = mock_publisher()
                     channel = mock_channel()
 
-                    subscriber = VcsTopicSubscriber(mock_channel(), publisher=publisher)
+                    subscriber = VcsTopicSubscriber(channel, publisher=publisher)
                     subscriber.consumer_context = mock_consumer
 
                     # Creating PR
                     with patch('polaris.vcs.messaging.publish.publish') as publish:
-                        subscriber.dispatch(mock_channel(), bitbucket_new_pull_request_message)
+                        subscriber.dispatch(channel, bitbucket_new_pull_request_message)
                         assert_topic_and_message(publish, VcsTopic, PullRequestsCreated)
 
                     # Updating PR
                     with patch('polaris.vcs.messaging.publish.publish') as publish:
-                        message = subscriber.dispatch(mock_channel(), bitbucket_update_pull_request_message)
+                        message = subscriber.dispatch(channel, bitbucket_update_pull_request_message)
                         assert message
                         source_pr_id = str(fixture.update_payload['data']['pullrequest']['id'])
                         source_repo_id = str(test_repository_source_id)
@@ -808,12 +808,12 @@ class TestAtlassianWebhookEvents:
                     publisher = mock_publisher()
                     channel = mock_channel()
 
-                    subscriber = VcsTopicSubscriber(mock_channel(), publisher=publisher)
+                    subscriber = VcsTopicSubscriber(channel, publisher=publisher)
                     subscriber.consumer_context = mock_consumer
 
                     # Creating PR
                     with patch('polaris.vcs.messaging.publish.publish') as publish:
-                        subscriber.dispatch(mock_channel(), bitbucket_new_pull_request_message)
+                        subscriber.dispatch(channel, bitbucket_new_pull_request_message)
                         assert_topic_and_message(publish, VcsTopic, PullRequestsCreated)
                     source_pr_id = str(fixture.update_payload['data']['pullrequest']['id'])
                     source_repo_id = str(test_repository_source_id)
@@ -825,7 +825,7 @@ class TestAtlassianWebhookEvents:
 
                     # Updating PR
                     with patch('polaris.vcs.messaging.publish.publish') as publish:
-                        message = subscriber.dispatch(mock_channel(), bitbucket_update_pull_request_message)
+                        message = subscriber.dispatch(channel, bitbucket_update_pull_request_message)
                         assert message
 
                         assert db.connection().execute(
