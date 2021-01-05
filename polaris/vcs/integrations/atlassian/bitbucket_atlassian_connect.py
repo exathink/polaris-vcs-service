@@ -232,5 +232,3 @@ def init_connector(app):
             atlassian_event_type='pullrequest:comment_deleted',
             atlassian_event=event
         )
-
-
