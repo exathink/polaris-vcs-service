@@ -23,7 +23,7 @@ config_provider = get_config_provider()
 
 class BitBucketConnectorContext:
     base_url = config_provider.get('BITBUCKET_CONNECTOR_BASE_URL')
-    mount_path = config_provider.get('MOUNT_PATH')
+    mount_path = None
 
     app_name = "Polaris Flow Connector for BitBucket"
     addon_name = "Polaris Flow Connector for BitBucket"
