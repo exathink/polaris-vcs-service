@@ -34,6 +34,7 @@ class BitBucketConnectorContext:
     addon_description = "Polaris Flow Connector for BitBucket"
     addon_scopes = ['repository', 'issue', 'pullrequest', 'webhook']
     addon_version = 1
+    api_migrations = None
 
 
 def init_connector(app):
