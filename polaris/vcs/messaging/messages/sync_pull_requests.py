@@ -19,7 +19,7 @@ class SyncPullRequests(Command):
 
     organization_key = fields.String(required=True)
     repository_key = fields.String(required=True)
-    pull_request_key = fields.String(required=False)
+    pull_request_key = fields.String(required=False, allow_none=True)
 
 
 # creating a separate typed message mainly to distinguish

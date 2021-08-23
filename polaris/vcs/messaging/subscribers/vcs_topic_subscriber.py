@@ -13,7 +13,7 @@ import logging
 
 from polaris.messaging.topics import TopicSubscriber, VcsTopic
 from polaris.vcs.messaging.messages import AtlassianConnectRepositoryEvent, GitlabRepositoryEvent, \
-    RemoteRepositoryPushEvent, GithubRepositoryEvent, SyncPullRequests
+    RemoteRepositoryPushEvent, GithubRepositoryEvent, SyncPullRequests, SyncPullRequest
 from polaris.messaging.messages import PullRequestsCreated, PullRequestsUpdated
 
 from polaris.messaging.utils import raise_message_processing_error
@@ -35,7 +35,8 @@ class VcsTopicSubscriber(TopicSubscriber):
                 GitlabRepositoryEvent,
                 GithubRepositoryEvent,
                 RemoteRepositoryPushEvent,
-                SyncPullRequests
+                SyncPullRequests,
+                SyncPullRequest
             ],
             publisher=publisher,
             exclusive=False
@@ -51,7 +52,7 @@ class VcsTopicSubscriber(TopicSubscriber):
         elif RemoteRepositoryPushEvent.message_type == message.message_type:
             return self.process_remote_repository_push_event(message)
 
-        elif SyncPullRequests.message_type == message.message_type:
+        elif message.message_type in [SyncPullRequest.message_type, SyncPullRequests.message_type]:
             return self.process_sync_pull_requests(message)
 
     @staticmethod
@@ -139,6 +140,7 @@ class VcsTopicSubscriber(TopicSubscriber):
             f"Processing  {message.message_type}: "
             f" Organization Key : {organization_key}"
             f" Repository Key : {repository_key}"
+            f" Pull Request Key : {pull_request_key}"
         )
 
         created_messages = []
@@ -152,6 +154,9 @@ class VcsTopicSubscriber(TopicSubscriber):
                 if result['success']:
                     self.publish_sync_pull_request_responses(message, result['pull_requests'], created_messages,
                                                              updated_messages)
+                else:
+                    raise_message_processing_error(message, 'Failed to process sync pull requests', result.get('message'))
+
             return created_messages, updated_messages
 
         except Exception as exc:
@@ -180,7 +185,7 @@ class VcsTopicSubscriber(TopicSubscriber):
             created_messages.append(created_message)
 
         if len(updated) > 0:
-            logger.info(f'{len(updated)} pull requests')
+            logger.info(f'{len(updated)} updated pull requests ')
             updated_message = PullRequestsUpdated(
                 send=dict(
                     organization_key=organization_key,
