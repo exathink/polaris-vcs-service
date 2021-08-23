@@ -223,12 +223,31 @@ class GitlabRepository(PolarisGitlabRepository):
                     fetch_pull_requests_url = None
             else:
                 raise ProcessingException(
-                    f"Server test failed {response.text} status: {response.status_code}\n"
+                    f"Fetch pull requests failed {response.text} status: {response.status_code}\n"
                 )
 
-    def fetch_pull_requests_from_source(self):
-        for pull_requests in self.fetch_pull_requests():
+    def get_pull_request(self, source_id):
+        fetch_pull_requests_url = f'{self.base_url}/projects/{self.source_repo_id}/merge_requests/{source_id}'
+
+        response = requests.get(
+            fetch_pull_requests_url,
+            headers={"Authorization": f"Bearer {self.personal_access_token}"},
+        )
+        if response.ok:
+            return response.json()
+        else:
+            raise ProcessingException(
+                f"Fetch pull requests failed {response.text} status: {response.status_code}\n"
+            )
+
+    def fetch_pull_requests_from_source(self, source_id=None):
+        if source_id is None:
+            for pull_requests in self.fetch_pull_requests():
+                yield [
+                    self.map_pull_request_info(pr)
+                    for pr in pull_requests
+                ]
+        else:
             yield [
-                self.map_pull_request_info(pr)
-                for pr in pull_requests
+                self.map_pull_request_info(self.get_pull_request(source_id))
             ]

@@ -39,14 +39,25 @@ def sync_repositories(connector_key, tracking_receipt_key=None):
                 )
 
 
-def sync_pull_requests(repository_key):
+def sync_pull_requests(repository_key, pull_request_key=None):
     log.info(f'Sync pull requests starting')
     repository_provider = repository_factory.get_provider_impl(repository_key)
     if repository_provider:
-        yield polaris.vcs.db.api.sync_pull_requests(
-            repository_key,
-            repository_provider.fetch_pull_requests_from_source()
-        )
+
+        if pull_request_key is not None:
+            pull_request = api.find_pull_request(pull_request_key)
+            if pull_request is not None:
+                yield api.sync_pull_requests(
+                    repository_key,
+                    repository_provider.fetch_pull_requests_from_source(source_id=pull_request.api_id)
+                )
+            else:
+                raise ProcessingException(f'Could not find pull request with key {pull_request_key}')
+        else:
+            yield api.sync_pull_requests(
+                repository_key,
+                repository_provider.fetch_pull_requests_from_source()
+            )
     else:
         return []
 

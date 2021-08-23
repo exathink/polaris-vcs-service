@@ -175,25 +175,29 @@ class GithubRepository(PolarisGithubRepository):
             web_url=pull_request.html_url
         )
 
-    def fetch_pull_requests_from_source(self):
+    def fetch_pull_requests_from_source(self, source_id=None):
         if self.access_token is not None:
             github = self.connector.get_github_client()
             repo = github.get_repo(int(self.repository.source_id))
             # TODO: There is no 'since' parameter so fetching all PRs. \
             #  Checking during iteration on pages for last updated PR
-            prs_iterator = repo.get_pulls(
-                state='all',
-                sort='updated',
-                direction='desc'
-            )
 
-            fetched_upto_last_update = False
-            while prs_iterator._couldGrow() and not fetched_upto_last_update:
-                pull_requests = []
-                for pr in prs_iterator._fetchNextPage():
-                    if pr.updated_at < self.last_updated:
-                        fetched_upto_last_update = True
-                        break
-                    else:
-                        pull_requests.append(self.map_pull_request_info(pr))
-                yield pull_requests
+            if source_id is None:
+                prs_iterator = repo.get_pulls(
+                    state='all',
+                    sort='updated',
+                    direction='desc'
+                )
+
+                fetched_upto_last_update = False
+                while prs_iterator._couldGrow() and not fetched_upto_last_update:
+                    pull_requests = []
+                    for pr in prs_iterator._fetchNextPage():
+                        if pr.updated_at < self.last_updated:
+                            fetched_upto_last_update = True
+                            break
+                        else:
+                            pull_requests.append(self.map_pull_request_info(pr))
+                    yield pull_requests
+            else:
+                yield [self.map_pull_request_info(repo.get_pull(int(source_id)))]

@@ -186,9 +186,38 @@ class BitBucketRepository(PolarisBitBucketRepository):
                     f'{response.text} ({response.status_code})'
                 )
 
-    def fetch_pull_requests_from_source(self):
-        for pull_requests in self.fetch_pull_requests():
-            yield [
-                self.map_pull_request_info(pr)
-                for pr in pull_requests
-            ]
+    def fetch_pull_request(self, source_id):
+        fetch_pull_requests_url = f'/2.0/repositories/{{{self.atlassian_account_key}}}/{{{self.source_repo_id.strip("{}")}}}/pullrequests/{source_id}'
+
+        response = self.connector.get(
+            fetch_pull_requests_url,
+            headers={"Accept": "application/json"},
+        )
+
+        if response.ok:
+            yield [response.json()]
+
+        else:
+            log.error(
+                f'Bitbucket fetch pull request failed: '
+                f'{self.connector.name}: {fetch_pull_requests_url} {response.text} ({response.status_code})'
+            )
+            raise ProcessingException(
+                f'Bitbucket fetch pull request failed: '
+                f'{response.text} ({response.status_code})'
+            )
+
+    def fetch_pull_requests_from_source(self, source_id=None):
+        if source_id is None:
+            for pull_requests in self.fetch_pull_requests():
+                yield [
+                    self.map_pull_request_info(pr)
+                    for pr in pull_requests
+                ]
+
+        else:
+            for pull_requests in self.fetch_pull_request(source_id):
+                yield [
+                    self.map_pull_request_info(pr)
+                    for pr in pull_requests
+                ]
