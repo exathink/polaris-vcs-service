@@ -9,7 +9,7 @@
 # Author: Krishna Kumar
 from polaris.messaging.messages import RepositoriesImported, PullRequestsUpdated, PullRequestsCreated
 from polaris.vcs.messaging.messages import RefreshConnectorRepositories, AtlassianConnectRepositoryEvent, \
-    GitlabRepositoryEvent, RemoteRepositoryPushEvent, GithubRepositoryEvent
+    GitlabRepositoryEvent, RemoteRepositoryPushEvent, GithubRepositoryEvent, SyncPullRequests
 from polaris.messaging.utils import publish
 from polaris.messaging.topics import ConnectorsTopic, VcsTopic
 from polaris.integrations.publish import connector_event
@@ -134,6 +134,21 @@ def pull_request_updated_event(organization_key, repository_key, pull_request_su
     )
 
 
+def sync_pull_requests(organization_key, repository_key, pull_request_key, channel=None):
+    message = SyncPullRequests(
+        send=dict(
+            organization_key=organization_key,
+            repository_key=repository_key,
+            pull_request_key=pull_request_key
+        )
+    )
+    publish(
+        VcsTopic,
+        message,
+        channel=channel
+    )
+
+
 # This shim is here only to explictly mark connector event as a referenced symbol.
 # PyCharm apparently does not correctly recognize re-exported names. In this case publish.connector_events
 # is marked as an unreferenced name and optimized out if we do optimize imports. This causes run time failures
@@ -141,4 +156,3 @@ def pull_request_updated_event(organization_key, repository_key, pull_request_su
 # so the import is
 # not optimized out by mistake.
 _dont_optimize_import = (connector_event,)
-
