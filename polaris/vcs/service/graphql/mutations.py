@@ -185,3 +185,27 @@ class RegisterRepositoriesConnectorWebhooks(graphene.Mutation):
                         )
                         for status in result]
                 )
+
+
+class SyncPullRequestsInput(graphene.InputObjectType):
+    organization_key = graphene.String(required=True)
+    repository_key = graphene.String(required=True)
+    pull_request_key = graphene.String(required=False)
+
+
+class SyncPullRequests(graphene.Mutation):
+    class Arguments:
+        sync_pull_requests_input = SyncPullRequestsInput(required=True)
+
+    success = graphene.Boolean()
+    error_message = graphene.String()
+
+    def mutate(self, info, sync_pull_requests_input):
+        publish.sync_pull_requests(
+            sync_pull_requests_input.organization_key,
+            sync_pull_requests_input.repository_key,
+            sync_pull_requests_input.pull_request_key
+        )
+        return SyncPullRequests(
+            success=True
+        )
