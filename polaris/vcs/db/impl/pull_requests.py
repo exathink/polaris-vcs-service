@@ -11,12 +11,16 @@
 import uuid
 import logging
 from datetime import datetime
-from polaris.repos.db.model import Repository, pull_requests, repositories
+from polaris.repos.db.model import Repository, PullRequest, pull_requests, repositories
 from polaris.common import db
 from sqlalchemy import select, and_, or_, Column, Integer
 from sqlalchemy.dialects.postgresql import insert
 
 log = logging.getLogger('polaris.vcs.db.impl.pull_requests')
+
+
+def find_pull_request(session, pull_request_key):
+    return PullRequest.find_by_pull_request_key(session, pull_request_key)
 
 
 def sync_pull_requests(session, repository_key, source_pull_requests):

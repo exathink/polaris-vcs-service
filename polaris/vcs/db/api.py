@@ -46,6 +46,17 @@ def sync_pull_requests(repository_key, source_pull_requests):
         return db.failure_message('Import Pull Requests', e)
 
 
+def find_pull_request(pull_request_key):
+    try:
+        with db.orm_session() as session:
+            return pull_requests.find_pull_request(session, pull_request_key)
+
+    except SQLAlchemyError as exc:
+        return db.process_exception("Find Pull Request", exc)
+    except Exception as e:
+        return db.failure_message('Find Pull Request', e)
+
+
 def register_webhooks(repository_key, webhook_info, join_this=None):
     try:
         with db.orm_session(join_this) as session:
