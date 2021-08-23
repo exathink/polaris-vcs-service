@@ -22,6 +22,9 @@ class SyncPullRequests(Command):
     pull_request_key = fields.String(required=False)
 
 
+# creating a separate typed message mainly to distinguish
+# single pull request sync messages from the repository level
+# once when the client knows which one they want.
 
-
-
+class SyncPullRequest(SyncPullRequests):
+    message_type = 'vcs.sync_pull_request'
