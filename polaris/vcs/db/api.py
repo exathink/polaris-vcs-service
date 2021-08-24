@@ -41,9 +41,19 @@ def sync_pull_requests(repository_key, source_pull_requests):
         with db.orm_session() as session:
             return pull_requests.sync_pull_requests(session, repository_key, source_pull_requests)
     except SQLAlchemyError as exc:
-        return db.process_exception("Import Pull Requests", exc)
+        return db.process_exception("Sync Pull Requests", exc)
     except Exception as e:
-        return db.failure_message('Import Pull Requests', e)
+        return db.failure_message('Sync Pull Requests', e)
+
+
+def get_pull_requests_to_sync(before=None, days=3, limit=100):
+    try:
+        with db.orm_session() as session:
+            return pull_requests.get_pull_requests_to_sync(session, before, days, limit)
+    except SQLAlchemyError as exc:
+        return db.process_exception("Get Pull Requests to Sync", exc)
+    except Exception as e:
+        return db.failure_message('Get Pull Requests to Sync', e)
 
 
 def find_pull_request(pull_request_key):

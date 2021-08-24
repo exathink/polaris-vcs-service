@@ -10,10 +10,10 @@
 
 import uuid
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from polaris.repos.db.model import Repository, PullRequest, pull_requests, repositories
 from polaris.common import db
-from sqlalchemy import select, and_, or_, Column, Integer
+from sqlalchemy import select, and_, or_, Column, Integer, cast, func, Interval
 from sqlalchemy.dialects.postgresql import insert
 
 log = logging.getLogger('polaris.vcs.db.impl.pull_requests')
@@ -21,6 +21,48 @@ log = logging.getLogger('polaris.vcs.db.impl.pull_requests')
 
 def find_pull_request(session, pull_request_key):
     return PullRequest.find_by_pull_request_key(session, pull_request_key)
+
+
+def get_pull_requests_to_sync(session, before, days, limit):
+    if before is None:
+        before = datetime.utcnow()
+
+    result = [
+        dict(
+            organization_key=record.organization_key,
+            repository_key=record.repository_key,
+            pull_request_key=record.pull_request_key,
+            source_last_updated=record.source_last_updated
+        )
+
+        for record in session.connection().execute(
+            select([
+                pull_requests.c.key.label('pull_request_key'),
+                repositories.c.key.label('repository_key'),
+                repositories.c.organization_key.label('organization_key'),
+                pull_requests.c.source_last_updated
+
+            ]).select_from(
+                pull_requests.join(
+                    repositories, pull_requests.c.repository_id == repositories.c.id
+                )
+            ).where(
+                and_(
+                    pull_requests.c.end_date == None,
+                    pull_requests.c.source_last_updated < before,
+                    func.extract('epoch', datetime.utcnow() - pull_requests.c.source_last_updated) > days*24*3600
+                )
+            ).order_by(
+                pull_requests.c.source_last_updated.desc()
+            ).limit(
+                limit
+            )
+        ).fetchall()
+    ]
+    return dict(
+        success=True,
+        pull_requests=result
+    )
 
 
 def sync_pull_requests(session, repository_key, source_pull_requests):
