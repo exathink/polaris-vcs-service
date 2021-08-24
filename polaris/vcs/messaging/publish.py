@@ -9,7 +9,7 @@
 # Author: Krishna Kumar
 from polaris.messaging.messages import RepositoriesImported, PullRequestsUpdated, PullRequestsCreated
 from polaris.vcs.messaging.messages import RefreshConnectorRepositories, AtlassianConnectRepositoryEvent, \
-    GitlabRepositoryEvent, RemoteRepositoryPushEvent, GithubRepositoryEvent, SyncPullRequests
+    GitlabRepositoryEvent, RemoteRepositoryPushEvent, GithubRepositoryEvent, SyncPullRequest
 from polaris.messaging.utils import publish
 from polaris.messaging.topics import ConnectorsTopic, VcsTopic
 from polaris.integrations.publish import connector_event
@@ -134,8 +134,8 @@ def pull_request_updated_event(organization_key, repository_key, pull_request_su
     )
 
 
-def sync_pull_requests(organization_key, repository_key, pull_request_key, channel=None):
-    message = SyncPullRequests(
+def sync_pull_request(organization_key, repository_key, pull_request_key, channel=None):
+    message = SyncPullRequest(
         send=dict(
             organization_key=organization_key,
             repository_key=repository_key,
