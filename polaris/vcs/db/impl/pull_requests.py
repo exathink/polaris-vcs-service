@@ -48,7 +48,7 @@ def get_pull_requests_to_sync(session, before, days, limit):
                 )
             ).where(
                 and_(
-                    pull_requests.c.end_date == None,
+                    pull_requests.c.state == 'open',
                     repositories.c.public == False,
                     pull_requests.c.source_last_updated < before,
                     func.extract('epoch', datetime.utcnow() - pull_requests.c.source_last_updated) > days*24*3600
