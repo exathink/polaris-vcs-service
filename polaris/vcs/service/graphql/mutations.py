@@ -201,7 +201,7 @@ class SyncPullRequests(graphene.Mutation):
     error_message = graphene.String()
 
     def mutate(self, info, sync_pull_requests_input):
-        publish.sync_pull_requests(
+        publish.sync_pull_request(
             sync_pull_requests_input.organization_key,
             sync_pull_requests_input.repository_key,
             sync_pull_requests_input.pull_request_key
@@ -209,3 +209,43 @@ class SyncPullRequests(graphene.Mutation):
         return SyncPullRequests(
             success=True
         )
+
+
+class PublishPullRequestInput(graphene.InputObjectType):
+    organization_key = graphene.String(required=True)
+    repository_key = graphene.String(required=True)
+    pull_request_key = graphene.String(required=True)
+    as_create = graphene.Boolean(required=True)
+
+
+class PublishPullRequest(graphene.Mutation):
+    class Arguments:
+        publish_pull_request_input = PublishPullRequestInput(required=True)
+
+    success = graphene.Boolean()
+    error_message = graphene.String()
+
+    def mutate(self, info, publish_pull_request_input):
+
+        with db.orm_session() as session:
+            pull_request_summary = commands.get_pull_request_summary(
+                publish_pull_request_input.pull_request_key,
+                join_this=session
+            )
+            if publish_pull_request_input.as_create:
+                publish.pull_request_created_event(
+                    publish_pull_request_input.organization_key,
+                    publish_pull_request_input.repository_key,
+                    [pull_request_summary],
+                )
+            else:
+                publish.pull_request_updated_event(
+                    publish_pull_request_input.organization_key,
+                    publish_pull_request_input.repository_key,
+                    [pull_request_summary],
+                )
+
+
+            return PublishPullRequest(
+                success=True
+            )

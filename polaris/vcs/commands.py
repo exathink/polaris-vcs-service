@@ -145,3 +145,7 @@ def test_vcs_connector(connector_key, join_this=None):
         )
         if vcs_connector:
             return vcs_connector.test()
+
+
+def get_pull_request_summary(pull_request_key, join_this=None):
+    return api.get_pull_request_summary(pull_request_key, join_this)

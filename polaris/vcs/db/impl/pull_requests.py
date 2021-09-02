@@ -16,6 +16,8 @@ from polaris.common import db
 from sqlalchemy import select, and_, or_, Column, Integer, cast, func, Interval
 from sqlalchemy.dialects.postgresql import insert
 
+from polaris.utils.exceptions import ProcessingException
+
 log = logging.getLogger('polaris.vcs.db.impl.pull_requests')
 
 
@@ -189,3 +191,30 @@ def sync_pull_requests(session, repository_key, source_pull_requests):
             success=True,
             pull_requests=synced_pull_requests
         )
+
+
+def get_pull_request_summary(session, pull_request_key):
+    pr = PullRequest.find_by_pull_request_key(session, pull_request_key)
+    if pr is not None:
+        return dict(
+            is_new=False,
+            key=pr.key,
+            title=pr.title,
+            description=pr.description,
+            web_url=pr.web_url,
+            created_at=pr.source_created_at,
+            updated_at=pr.source_last_updated,
+            source_state=pr.source_state,
+            state=pr.state,
+            merge_status=pr.source_merge_status,
+            end_date=pr.end_date,
+            source_branch=pr.source_branch,
+            target_branch=pr.target_branch,
+            source_id=pr.source_id,
+            display_id=pr.source_display_id,
+            deleted_at=pr.deleted_at,
+            source_repository_key=pr.repository.key
+        )
+
+    else:
+        raise ProcessingException(f"Could not find pull request with key {pull_request_key}")

@@ -117,3 +117,14 @@ def ack_commits_details_created(commit_keys):
         return db.process_exception("Ack Commits Created", exc)
     except Exception as e:
         return db.failure_message('Ack Commits Created', e)
+
+
+def get_pull_request_summary(pull_request_key, join_this=None):
+    try:
+        with db.orm_session(join_this) as session:
+            return pull_requests.get_pull_request_summary(session, pull_request_key)
+
+    except SQLAlchemyError as exc:
+        return db.process_exception("Get Pull Request Info", exc)
+    except Exception as e:
+        return db.failure_message('Get Pull Request Info', e)
