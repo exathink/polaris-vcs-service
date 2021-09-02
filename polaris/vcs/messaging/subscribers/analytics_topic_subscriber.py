@@ -8,12 +8,14 @@
 
 # Author: Krishna Kumar
 
+import logging
 
 from polaris.messaging.topics import TopicSubscriber, AnalyticsTopic
-from polaris.messaging.messages import CommitsCreated, CommitDetailsCreated
+from polaris.messaging.messages import CommitsCreated, CommitDetailsCreated, PullRequestsCreated, PullRequestsUpdated
 from polaris.messaging.utils import raise_on_failure
 from polaris.vcs.db import api
 
+logger = logging.getLogger('polaris.vcs.messaging.analytics_topic_subscriber')
 
 class AnalyticsTopicSubscriber(TopicSubscriber):
     def __init__(self, channel, publisher=None):
@@ -21,7 +23,8 @@ class AnalyticsTopicSubscriber(TopicSubscriber):
             topic=AnalyticsTopic(channel, create=True),
             subscriber_queue='analytics_vcs',
             message_classes=[
-                CommitsCreated, CommitDetailsCreated
+                CommitsCreated, CommitDetailsCreated,
+                PullRequestsCreated, PullRequestsUpdated
             ],
             publisher=publisher,
             exclusive=False
@@ -33,6 +36,9 @@ class AnalyticsTopicSubscriber(TopicSubscriber):
 
         elif CommitDetailsCreated.message_type == message.message_type:
             return self.process_commit_details_created(message)
+
+        elif message.message_type in [PullRequestsCreated.message_type, PullRequestsUpdated.message_type]:
+            return self.process_pull_request_event(message)
 
     @staticmethod
     def process_commits_created(message):
@@ -54,4 +60,13 @@ class AnalyticsTopicSubscriber(TopicSubscriber):
             api.ack_commits_details_created([
                 commit['key'] for commit in commit_details_created['commit_details']
             ])
+        )
+
+    @staticmethod
+    def process_pull_request_event(message):
+        logger.info(f"Processing Pull Request Ack Event: {message.message_type}")
+
+        return raise_on_failure(
+            message,
+            api.ack_pull_request_event(message['pull_request_summaries'])
         )

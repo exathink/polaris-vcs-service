@@ -119,6 +119,16 @@ def ack_commits_details_created(commit_keys):
         return db.failure_message('Ack Commits Created', e)
 
 
+def ack_pull_request_event(pull_request_summaries):
+    try:
+        with db.orm_session() as session:
+            return pull_requests.ack_pull_request_event(session, pull_request_summaries)
+    except SQLAlchemyError as exc:
+        return db.process_exception("Ack pull request event", exc)
+    except Exception as e:
+        return db.failure_message('Ack pull request event', e)
+
+
 def get_pull_request_summary(pull_request_key, join_this=None):
     try:
         with db.orm_session(join_this) as session:

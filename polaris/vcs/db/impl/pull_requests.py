@@ -13,7 +13,7 @@ import logging
 from datetime import datetime, timedelta
 from polaris.repos.db.model import Repository, PullRequest, pull_requests, repositories
 from polaris.common import db
-from sqlalchemy import select, and_, or_, Column, Integer, cast, func, Interval
+from sqlalchemy import select, and_, or_, Column, Integer, cast, func, Interval, bindparam
 from sqlalchemy.dialects.postgresql import insert
 
 from polaris.utils.exceptions import ProcessingException
@@ -218,3 +218,38 @@ def get_pull_request_summary(session, pull_request_key):
 
     else:
         raise ProcessingException(f"Could not find pull request with key {pull_request_key}")
+
+
+def ack_pull_request_event(session, pull_request_summaries):
+    update_stmt = pull_requests.update().where(
+        and_(
+            pull_requests.c.key == bindparam('pull_request_key'),
+            # we dont want the sync dates to be monotonically non-decreasing so ignore
+            # acks that go back in time
+            or_(
+                pull_requests.c.analytics_last_updated == None,
+                pull_requests.c.analytics_last_updated < bindparam('analytics_last_updated')
+            )
+        )
+    ).values(
+        dict(
+            analytics_last_updated=bindparam('analytics_last_updated')
+        )
+    )
+    updated = session.connection().execute(
+        update_stmt,
+        [
+            dict(
+                pull_request_key=pr['key'],
+                # source_last_updated for this message is timestamp for
+                # last time this was synced with analytics
+                analytics_last_updated=pr['updated_at']
+            )
+            for pr in pull_request_summaries
+        ]
+    ).rowcount
+
+    return dict(
+        success=True,
+        updated=updated
+    )
