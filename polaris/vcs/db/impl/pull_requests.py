@@ -16,6 +16,8 @@ from polaris.common import db
 from sqlalchemy import select, and_, or_, Column, Integer, cast, func, Interval, bindparam
 from sqlalchemy.dialects.postgresql import insert
 
+from polaris.repos.db.schema import RepositoryImportState
+
 from polaris.utils.exceptions import ProcessingException
 
 log = logging.getLogger('polaris.vcs.db.impl.pull_requests')
@@ -57,113 +59,119 @@ def pull_request_summary(pull_request_row, is_new, repository_key, key=None):
 def sync_pull_requests(session, repository_key, source_pull_requests):
     if repository_key:
         repository = Repository.find_by_repository_key(session, repository_key)
-        repository_id = repository.id
-        # create a temp table for pull requests and insert source_pull_requests
-        pull_requests_temp = db.temp_table_from(
-            pull_requests,
-            table_name='pull_requests_temp',
-            exclude_columns=[
-                pull_requests.c.id,
-                pull_requests.c.source_repository_id,
-            ],
-            extra_columns=[
-                Column('source_repository_id', Integer, nullable=True),
-            ]
-        )
-        last_sync = datetime.utcnow()
-        pull_requests_temp.create(session.connection(), checkfirst=True)
-        for source_prs in source_pull_requests:
+        if repository.import_state != RepositoryImportState.IMPORT_DISABLED:
+            repository_id = repository.id
+            # create a temp table for pull requests and insert source_pull_requests
+            pull_requests_temp = db.temp_table_from(
+                pull_requests,
+                table_name='pull_requests_temp',
+                exclude_columns=[
+                    pull_requests.c.id,
+                    pull_requests.c.source_repository_id,
+                ],
+                extra_columns=[
+                    Column('source_repository_id', Integer, nullable=True),
+                ]
+            )
+            last_sync = datetime.utcnow()
+            pull_requests_temp.create(session.connection(), checkfirst=True)
+            for source_prs in source_pull_requests:
+                session.connection().execute(
+                    pull_requests_temp.insert([
+                        dict(
+                            repository_id=repository_id,
+                            key=uuid.uuid4(),
+                            last_sync=last_sync,
+                            **source_pr
+                        )
+                        for source_pr in source_prs
+                    ])
+                )
+
+            # Add source and target repo ids
+
             session.connection().execute(
-                pull_requests_temp.insert([
-                    dict(
-                        repository_id=repository_id,
-                        key=uuid.uuid4(),
-                        last_sync=last_sync,
-                        **source_pr
+                pull_requests_temp.update().where(
+                    repositories.c.source_id == pull_requests_temp.c.source_repository_source_id,
+                ).values(
+                    source_repository_id=repositories.c.id,
+                )
+            )
+
+            new_and_updated_pull_requests = session.connection().execute(
+                select([*pull_requests_temp.columns, pull_requests.c.key.label('current_key'), \
+                        repositories.c.key.label('source_repository_key')]).select_from(
+                    pull_requests_temp.outerjoin(
+                        pull_requests,
+                        and_(
+                            pull_requests_temp.c.repository_id == pull_requests.c.repository_id,
+                            pull_requests_temp.c.source_id == pull_requests.c.source_id
+                        )
+                    ).join(
+                        repositories, pull_requests_temp.c.source_repository_id == repositories.c.id
                     )
-                    for source_pr in source_prs
-                ])
-            )
-
-        # Add source and target repo ids
-
-        session.connection().execute(
-            pull_requests_temp.update().where(
-                repositories.c.source_id == pull_requests_temp.c.source_repository_source_id,
-            ).values(
-                source_repository_id=repositories.c.id,
-            )
-        )
-
-        new_and_updated_pull_requests = session.connection().execute(
-            select([*pull_requests_temp.columns, pull_requests.c.key.label('current_key'), \
-                    repositories.c.key.label('source_repository_key')]).select_from(
-                pull_requests_temp.outerjoin(
-                    pull_requests,
-                    and_(
-                        pull_requests_temp.c.repository_id == pull_requests.c.repository_id,
-                        pull_requests_temp.c.source_id == pull_requests.c.source_id
+                ).where(
+                    or_(
+                        pull_requests_temp.c.source_last_updated > pull_requests.c.source_last_updated,
+                        pull_requests.c.key == None
                     )
-                ).join(
-                    repositories, pull_requests_temp.c.source_repository_id == repositories.c.id
                 )
-            ).where(
-                or_(
-                    pull_requests_temp.c.source_last_updated > pull_requests.c.source_last_updated,
-                    pull_requests.c.key == None
+            ).fetchall()
+
+            # Update pull_requests
+            upsert = insert(
+                pull_requests
+            ).from_select(
+                [column.name for column in pull_requests_temp.columns],
+                select(
+                    [pull_requests_temp]
+                ).where(
+                        pull_requests_temp.c.key != None,
                 )
             )
-        ).fetchall()
 
-        # Update pull_requests
-        upsert = insert(
-            pull_requests
-        ).from_select(
-            [column.name for column in pull_requests_temp.columns],
-            select(
-                [pull_requests_temp]
-            ).where(
-                    pull_requests_temp.c.key != None,
-            )
-        )
-
-        session.connection().execute(
-            upsert.on_conflict_do_update(
-                index_elements=['repository_id', 'source_id'],
-                set_=dict(
-                    title=upsert.excluded.title,
-                    description=upsert.excluded.description,
-                    source_created_at=upsert.excluded.source_created_at,
-                    source_last_updated=upsert.excluded.source_last_updated,
-                    last_sync=upsert.excluded.last_sync,
-                    source_state=upsert.excluded.source_state,
-                    state=upsert.excluded.state,
-                    source_merge_status=upsert.excluded.source_merge_status,
-                    source_merged_at=upsert.excluded.source_merged_at,
-                    source_closed_at=upsert.excluded.source_closed_at,
-                    end_date=upsert.excluded.end_date,
-                    deleted_at=upsert.excluded.deleted_at,
+            session.connection().execute(
+                upsert.on_conflict_do_update(
+                    index_elements=['repository_id', 'source_id'],
+                    set_=dict(
+                        title=upsert.excluded.title,
+                        description=upsert.excluded.description,
+                        source_created_at=upsert.excluded.source_created_at,
+                        source_last_updated=upsert.excluded.source_last_updated,
+                        last_sync=upsert.excluded.last_sync,
+                        source_state=upsert.excluded.source_state,
+                        state=upsert.excluded.state,
+                        source_merge_status=upsert.excluded.source_merge_status,
+                        source_merged_at=upsert.excluded.source_merged_at,
+                        source_closed_at=upsert.excluded.source_closed_at,
+                        end_date=upsert.excluded.end_date,
+                        deleted_at=upsert.excluded.deleted_at,
+                    )
                 )
             )
-        )
 
-        synced_pull_requests = []
-        # NOTE: Had to check for None, as in the case when there are no fetched PRs,
-        # new_and_updated_pull_request has entries with all None values
-        for pr in new_and_updated_pull_requests:
-            if pr.source_id is not None:
-                synced_pull_requests.append(
-                    pull_request_summary(
-                        pr,
-                        is_new=pr.current_key is None,
-                        repository_key=pr.source_repository_key,
-                        key=pr.key if pr.current_key is None else pr.current_key
-                    ),
-                )
-        return dict(
-            success=True,
-            pull_requests=synced_pull_requests
-        )
+            synced_pull_requests = []
+            # NOTE: Had to check for None, as in the case when there are no fetched PRs,
+            # new_and_updated_pull_request has entries with all None values
+            for pr in new_and_updated_pull_requests:
+                if pr.source_id is not None:
+                    synced_pull_requests.append(
+                        pull_request_summary(
+                            pr,
+                            is_new=pr.current_key is None,
+                            repository_key=pr.source_repository_key,
+                            key=pr.key if pr.current_key is None else pr.current_key
+                        ),
+                    )
+            return dict(
+                success=True,
+                pull_requests=synced_pull_requests
+            )
+        else:
+            log.info(f'Cannot sync pull requests for repository: {repository.name}. It has not been imported')
+            return dict(
+                success=False
+            )
 
 
 def get_pull_request_summary(session, pull_request_key):
