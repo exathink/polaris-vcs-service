@@ -25,46 +25,32 @@ def find_pull_request(session, pull_request_key):
     return PullRequest.find_by_pull_request_key(session, pull_request_key)
 
 
-def get_pull_requests_to_sync(session, before, days, limit):
-    if before is None:
-        before = datetime.utcnow()
+"""
+    This is a common function to extract a pull_request_summary from a database row. This is the inverse
+    operation of the summary object that is passed to the database operations from a pull request message
+    and is used to return an dict that can be passed as a payload for a pull request message.
+"""
 
-    result = [
-        dict(
-            organization_key=record.organization_key,
-            repository_key=record.repository_key,
-            pull_request_key=record.pull_request_key,
-            source_last_updated=record.source_last_updated
-        )
 
-        for record in session.connection().execute(
-            select([
-                pull_requests.c.key.label('pull_request_key'),
-                repositories.c.key.label('repository_key'),
-                repositories.c.organization_key.label('organization_key'),
-                pull_requests.c.source_last_updated
-
-            ]).select_from(
-                pull_requests.join(
-                    repositories, pull_requests.c.repository_id == repositories.c.id
-                )
-            ).where(
-                and_(
-                    pull_requests.c.state == 'open',
-                    repositories.c.public == False,
-                    pull_requests.c.source_last_updated < before,
-                    func.extract('epoch', datetime.utcnow() - pull_requests.c.source_last_updated) > days*24*3600
-                )
-            ).order_by(
-                pull_requests.c.source_last_updated.desc()
-            ).limit(
-                limit
-            )
-        ).fetchall()
-    ]
+def pull_request_summary(pull_request_row, is_new, repository_key, key=None):
     return dict(
-        success=True,
-        pull_requests=result
+        is_new=is_new,
+        key=key or pull_request_row.key,
+        title=pull_request_row.title,
+        description=pull_request_row.description,
+        web_url=pull_request_row.web_url,
+        created_at=pull_request_row.source_created_at,
+        updated_at=pull_request_row.source_last_updated,
+        source_state=pull_request_row.source_state,
+        state=pull_request_row.state,
+        merge_status=pull_request_row.source_merge_status,
+        end_date=pull_request_row.end_date,
+        source_branch=pull_request_row.source_branch,
+        target_branch=pull_request_row.target_branch,
+        source_id=pull_request_row.source_id,
+        display_id=pull_request_row.source_display_id,
+        deleted_at=pull_request_row.deleted_at,
+        source_repository_key=repository_key
     )
 
 
@@ -167,25 +153,12 @@ def sync_pull_requests(session, repository_key, source_pull_requests):
         for pr in new_and_updated_pull_requests:
             if pr.source_id is not None:
                 synced_pull_requests.append(
-                    dict(
+                    pull_request_summary(
+                        pr,
                         is_new=pr.current_key is None,
-                        key=pr.key if pr.current_key is None else pr.current_key,
-                        title=pr.title,
-                        description=pr.description,
-                        web_url=pr.web_url,
-                        created_at=pr.source_created_at,
-                        updated_at=pr.source_last_updated,
-                        source_state=pr.source_state,
-                        state=pr.state,
-                        merge_status=pr.source_merge_status,
-                        end_date=pr.end_date,
-                        source_branch=pr.source_branch,
-                        target_branch=pr.target_branch,
-                        source_id=pr.source_id,
-                        display_id=pr.source_display_id,
-                        deleted_at=pr.deleted_at,
-                        source_repository_key=pr.source_repository_key
-                    )
+                        repository_key=pr.source_repository_key,
+                        key=pr.key if pr.current_key is None else pr.current_key
+                    ),
                 )
         return dict(
             success=True,
@@ -196,28 +169,100 @@ def sync_pull_requests(session, repository_key, source_pull_requests):
 def get_pull_request_summary(session, pull_request_key):
     pr = PullRequest.find_by_pull_request_key(session, pull_request_key)
     if pr is not None:
-        return dict(
-            is_new=False,
-            key=pr.key,
-            title=pr.title,
-            description=pr.description,
-            web_url=pr.web_url,
-            created_at=pr.source_created_at,
-            updated_at=pr.source_last_updated,
-            source_state=pr.source_state,
-            state=pr.state,
-            merge_status=pr.source_merge_status,
-            end_date=pr.end_date,
-            source_branch=pr.source_branch,
-            target_branch=pr.target_branch,
-            source_id=pr.source_id,
-            display_id=pr.source_display_id,
-            deleted_at=pr.deleted_at,
-            source_repository_key=pr.repository.key
-        )
+        return pull_request_summary(pr, is_new=False, repository_key=pr.repository.key)
 
     else:
         raise ProcessingException(f"Could not find pull request with key {pull_request_key}")
+
+
+def get_pull_requests_to_sync_with_analytics(session, before=None, threshold_minutes=15, limit=100):
+    if before is None:
+        # by default, we dont sync anything that was updated in the last threshold_minutes minutes
+        before = datetime.utcnow() - timedelta(minutes=threshold_minutes)
+
+    pull_requests_to_sync = [
+        dict(
+            organization_key=result.organization_key,
+            repository_key=result.repository_key,
+            pull_request_summary=pull_request_summary(
+                result,
+                is_new=result.analytics_last_updated is None,
+                repository_key=result.repository_key
+            )
+        )
+        for result in
+        session.connection().execute(
+            select([
+                repositories.c.organization_key,
+                repositories.c.key.label('repository_key'),
+                *pull_requests.columns
+            ]).select_from(
+                pull_requests.join(
+                    repositories, pull_requests.c.repository_id == repositories.c.id
+                )
+            ).where(
+                and_(
+                    pull_requests.c.source_last_updated < before,
+                    or_(
+                        pull_requests.c.analytics_last_updated == None,
+                        pull_requests.c.source_last_updated > pull_requests.c.analytics_last_updated
+                    )
+                )
+            ).order_by(
+                pull_requests.c.source_last_updated.desc()
+            ).limit(
+                limit
+            )
+        ).fetchall()
+    ]
+
+    return dict(
+        success=True,
+        pull_requests=pull_requests_to_sync
+    )
+
+
+def get_pull_requests_to_sync_with_source(session, before, days, limit):
+    if before is None:
+        before = datetime.utcnow()
+
+    result = [
+        dict(
+            organization_key=record.organization_key,
+            repository_key=record.repository_key,
+            pull_request_key=record.pull_request_key,
+            source_last_updated=record.source_last_updated
+        )
+
+        for record in session.connection().execute(
+            select([
+                pull_requests.c.key.label('pull_request_key'),
+                repositories.c.key.label('repository_key'),
+                repositories.c.organization_key.label('organization_key'),
+                pull_requests.c.source_last_updated
+
+            ]).select_from(
+                pull_requests.join(
+                    repositories, pull_requests.c.repository_id == repositories.c.id
+                )
+            ).where(
+                and_(
+                    pull_requests.c.state == 'open',
+                    repositories.c.public == False,
+                    pull_requests.c.source_last_updated < before,
+                    func.extract('epoch', datetime.utcnow() - pull_requests.c.source_last_updated) > days * 24 * 3600
+                )
+            ).order_by(
+                pull_requests.c.source_last_updated.desc()
+            ).limit(
+                limit
+            )
+        ).fetchall()
+    ]
+    return dict(
+        success=True,
+        pull_requests=result
+    )
 
 
 def ack_pull_request_event(session, pull_request_summaries):
