@@ -189,8 +189,8 @@ def get_pull_requests_to_sync_with_analytics(session, before=None, days=1, thres
         before = datetime.utcnow() - timedelta(minutes=threshold_minutes)
 
     # we only sync items that have been out of sync for a certain window. This ensures
-    # that we dont keep trying to sync things indefintely if they are in a permanently failed state.
-    after = datetime.utcnow() - timedelta(days=1)
+    # that we dont keep trying to sync things indefinitely if they are in a permanently failed state.
+    after = datetime.utcnow() - timedelta(days=days)
 
     pull_requests_to_sync = [
         dict(
