@@ -128,6 +128,31 @@ def setup_import_state_tests(setup_org_repo, setup_connectors):
     repository, organization = setup_org_repo
     connectors = setup_connectors
 
+    with db.orm_session() as session:
+        session.add(organization)
+        session.add(repository)
+        repository.import_state = RepositoryImportState.IMPORT_DISABLED
+
+        for state in [
+            RepositoryImportState.IMPORT_READY,
+            RepositoryImportState.IMPORT_PENDING,
+            RepositoryImportState.IMPORT_FAILED,
+            RepositoryImportState.IMPORT_TIMED_OUT,
+            RepositoryImportState.IMPORT_SMALL_READY
+        ]:
+            organization.repositories.append(
+                Repository(
+                    connector_key=github_connector_key,
+                    organization_key=test_organization_key,
+                    key=uuid.uuid4(),
+                    name=test_repository_name,
+                    source_id=str(uuid.uuid4()),
+                    import_state=state,
+                    description='A neat new repo',
+                    integration_type=VcsIntegrationTypes.github.value,
+                    url='https://foo.bar.com'
+                )
+            )
 
     yield organization, connectors
 
@@ -161,29 +186,6 @@ class TestRepositoryFilters:
 
     def it_filters_repositories_by_importing_state(self, setup_import_state_tests):
         organization, _ = setup_import_state_tests
-
-        with db.orm_session() as session:
-            session.add(organization)
-            for state in [
-                RepositoryImportState.IMPORT_READY,
-                RepositoryImportState.IMPORT_PENDING,
-                RepositoryImportState.IMPORT_FAILED,
-                RepositoryImportState.IMPORT_TIMED_OUT,
-                RepositoryImportState.IMPORT_SMALL_READY
-            ]:
-                organization.repositories.append(
-                    Repository(
-                        connector_key=github_connector_key,
-                        organization_key=test_organization_key,
-                        key=uuid.uuid4(),
-                        name=test_repository_name,
-                        source_id=str(uuid.uuid4()),
-                        import_state=state,
-                        description='A neat new repo',
-                        integration_type=VcsIntegrationTypes.github.value,
-                        url='https://foo.bar.com'
-                    )
-                )
 
         client = Client(schema)
 
