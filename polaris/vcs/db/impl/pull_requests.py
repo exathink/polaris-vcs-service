@@ -175,10 +175,14 @@ def get_pull_request_summary(session, pull_request_key):
         raise ProcessingException(f"Could not find pull request with key {pull_request_key}")
 
 
-def get_pull_requests_to_sync_with_analytics(session, before=None, threshold_minutes=15, limit=100):
+def get_pull_requests_to_sync_with_analytics(session, before=None, days=1, threshold_minutes=15, limit=100):
     if before is None:
         # by default, we dont sync anything that was updated in the last threshold_minutes minutes
         before = datetime.utcnow() - timedelta(minutes=threshold_minutes)
+
+    # we only sync items that have been out of sync for a certain window. This ensures
+    # that we dont keep trying to sync things indefintely if they are in a permanently failed state.
+    after = datetime.utcnow() - timedelta(days=1)
 
     pull_requests_to_sync = [
         dict(
@@ -203,6 +207,7 @@ def get_pull_requests_to_sync_with_analytics(session, before=None, threshold_min
             ).where(
                 and_(
                     pull_requests.c.source_last_updated < before,
+                    pull_requests.c.source_last_updated >= after,
                     or_(
                         pull_requests.c.analytics_last_updated == None,
                         pull_requests.c.source_last_updated > pull_requests.c.analytics_last_updated

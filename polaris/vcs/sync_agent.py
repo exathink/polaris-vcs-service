@@ -60,13 +60,13 @@ class VcsSourceSyncAgent(Agent):
 
 class VcsAnalyticsSyncAgent(Agent):
 
-    def run(self, limit):
-        self.loop(lambda: self.sync_pull_requests_with_analytics(limit=limit))
+    def run(self, days, limit):
+        self.loop(lambda: self.sync_pull_requests_with_analytics(days=days, limit=limit))
 
-    def sync_pull_requests_with_analytics(self, limit):
+    def sync_pull_requests_with_analytics(self, days, limit):
         logger.info("Checking for pull requests to sync with analytics")
 
-        result = api.get_pull_requests_to_sync_with_analytics(limit=limit)
+        result = api.get_pull_requests_to_sync_with_analytics(days=days, limit=limit)
         last_updated = None
         while result['success']:
             if len(result['pull_requests']) > 0:
@@ -113,7 +113,7 @@ class VcsAnalyticsSyncAgent(Agent):
 
 
 # Command line drivers
-
+# This is the default command
 def start(name=None, poll_interval=None, one_shot=False, days=3, limit=100):
     agent = VcsSourceSyncAgent(
         name=name,
@@ -124,14 +124,18 @@ def start(name=None, poll_interval=None, one_shot=False, days=3, limit=100):
     agent.run(days, limit)
 
 
-def sync_pull_requests_with_analytics(name=None, poll_interval=None, one_shot=False, limit=100):
+def sync_pull_requests_with_source(name=None, poll_interval=None, one_shot=False, days=3, limit=100):
+    start(name, poll_interval, one_shot, days, limit)
+
+
+def sync_pull_requests_with_analytics(name=None, poll_interval=None, one_shot=False, days=1, limit=100):
     agent = VcsAnalyticsSyncAgent(
         name=name,
         poll_interval=poll_interval,
         one_shot=one_shot
     )
     logger.info("Starting VcsAnalyticsSyncAgent")
-    agent.run(limit)
+    agent.run(days, limit)
 
 
 if __name__ == '__main__':
@@ -143,5 +147,6 @@ if __name__ == '__main__':
 
     argh.dispatch_commands([
         start,
+        sync_pull_requests_with_source,
         sync_pull_requests_with_analytics
     ])

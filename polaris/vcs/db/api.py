@@ -56,10 +56,10 @@ def get_pull_requests_to_sync_with_source(before=None, days=3, limit=100):
         return db.failure_message('Get Pull Requests to Sync with Source', e)
 
 
-def get_pull_requests_to_sync_with_analytics(before=None, limit=100):
+def get_pull_requests_to_sync_with_analytics(before=None, days=1, limit=100):
     try:
         with db.orm_session() as session:
-            return pull_requests.get_pull_requests_to_sync_with_analytics(session, before=before, limit=limit)
+            return pull_requests.get_pull_requests_to_sync_with_analytics(session, before=before, days=days, limit=limit)
     except SQLAlchemyError as exc:
         return db.process_exception("Get Pull Requests to Sync with Analytics", exc)
     except Exception as e:
