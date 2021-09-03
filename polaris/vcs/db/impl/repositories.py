@@ -229,10 +229,18 @@ def handle_remote_repository_push(session, connector_key, repository_source_id):
         if repo.import_state == RepositoryImportState.CHECK_FOR_UPDATES:
             repo.import_state = RepositoryImportState.UPDATE_READY
 
-        return dict(
-            success=True,
-            organization_key=repo.organization_key,
-            repository_key=repo.key,
-        )
+            return dict(
+                success=True,
+                organization_key=repo.organization_key,
+                repository_key=repo.key,
+            )
+        else:
+            # if the repo is not set up for updates we should not consider the
+            # push to be handled successfully. We dont want to trigger pull request updates etc that
+            # are kicked off when a successful push is registered.
+            return dict(
+                success=False
+            )
+
     else:
         raise ProcessingException(f"Could not find repository with source_id {repository_source_id}")
