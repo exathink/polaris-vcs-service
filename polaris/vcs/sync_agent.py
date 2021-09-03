@@ -22,15 +22,15 @@ from logging import getLogger
 logger = getLogger('polaris.vcs.sync_agent')
 
 
-class VcsAgent(Agent):
+class VcsSourceSyncAgent(Agent):
 
     def run(self, days, limit):
-        self.loop(lambda: self.sync_pull_requests(days, limit))
+        self.loop(lambda: self.sync_pull_requests_with_source(days, limit))
 
-    def sync_pull_requests(self, days, limit):
-        logger.info("Checking for pull requests to sync")
+    def sync_pull_requests_with_source(self, days, limit):
+        logger.info("Checking for pull requests to sync with remote source")
 
-        result = api.get_pull_requests_to_sync(days=days, limit=limit)
+        result = api.get_pull_requests_to_sync_with_source(days=days, limit=limit)
         last_updated = None
         while result['success']:
             if len(result['pull_requests']) > 0:
@@ -46,20 +46,76 @@ class VcsAgent(Agent):
                         break
 
             else:
-                logger.info("No pull_requests found to sync...")
+                logger.info("No pull_requests left to sync...")
                 break
 
             # fetch next batch
             if self.exit_signal_received:
                 break
             logger.info(f'Fetching next batch of {limit} pull requests')
-            result = api.get_pull_requests_to_sync(before=last_updated, days=days, limit=limit)
+            result = api.get_pull_requests_to_sync_with_source(before=last_updated, days=days, limit=limit)
 
         return True
 
 
+class VcsAnalyticsSyncAgent(Agent):
+
+    def run(self, days, limit):
+        self.loop(lambda: self.sync_pull_requests_with_analytics(days=days, limit=limit))
+
+    def sync_pull_requests_with_analytics(self, days, limit):
+        logger.info("Checking for pull requests to sync with analytics")
+
+        result = api.get_pull_requests_to_sync_with_analytics(days=days, limit=limit)
+        last_updated = None
+        while result['success']:
+            if len(result['pull_requests']) > 0:
+                for pull_request in result['pull_requests']:
+                    pull_request_summary = pull_request['pull_request_summary']
+                    if pull_request_summary['is_new']:
+                        publish.pull_request_created_event(
+                            pull_request[
+                                'organization_key'
+                            ],
+                            pull_request[
+                                'repository_key'
+                            ],
+                            [
+                                pull_request_summary
+                            ]
+                        )
+                    else:
+                        publish.pull_request_updated_event(
+                            pull_request[
+                                'organization_key'
+                            ],
+                            pull_request[
+                                'repository_key'
+                            ],
+                            [
+                                pull_request_summary
+                            ]
+                        )
+                    last_updated = pull_request_summary['updated_at']
+                    if self.exit_signal_received:
+                        shutdown()
+                        break
+            else:
+                logger.info('No pull requests to sync')
+                break
+
+            if self.exit_signal_received:
+                break
+            # get the next batch
+            result = api.get_pull_requests_to_sync_with_analytics(before=last_updated, limit=limit)
+
+        return True
+
+
+# Command line drivers
+# This is the default command
 def start(name=None, poll_interval=None, one_shot=False, days=3, limit=100):
-    agent = VcsAgent(
+    agent = VcsSourceSyncAgent(
         name=name,
         poll_interval=poll_interval,
         one_shot=one_shot
@@ -68,8 +124,21 @@ def start(name=None, poll_interval=None, one_shot=False, days=3, limit=100):
     agent.run(days, limit)
 
 
-if __name__ == '__main__':
+def sync_pull_requests_with_source(name=None, poll_interval=None, one_shot=False, days=3, limit=100):
+    start(name, poll_interval, one_shot, days, limit)
 
+
+def sync_pull_requests_with_analytics(name=None, poll_interval=None, one_shot=False, days=1, limit=100):
+    agent = VcsAnalyticsSyncAgent(
+        name=name,
+        poll_interval=poll_interval,
+        one_shot=one_shot
+    )
+    logger.info("Starting VcsAnalyticsSyncAgent")
+    agent.run(days, limit)
+
+
+if __name__ == '__main__':
     config_logging()
     logger.info("Connecting to database....")
     db.init()
@@ -77,5 +146,7 @@ if __name__ == '__main__':
     init_topics_to_publish(VcsTopic)
 
     argh.dispatch_commands([
-        start
+        start,
+        sync_pull_requests_with_source,
+        sync_pull_requests_with_analytics
     ])

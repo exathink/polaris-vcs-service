@@ -16,7 +16,7 @@ from polaris.repos.db.model import Repository
 from polaris.vcs import connector_factory
 from polaris.vcs.db import api
 from polaris.vcs.integrations.gitlab import GitlabRepository
-
+from polaris.repos.db.schema import RepositoryImportState
 
 def handle_gitlab_repository_push(connector_key, payload, channel=None):
     event = json.loads(payload)
@@ -34,32 +34,33 @@ def handle_gitlab_pull_request_event(connector_key, payload, channel=None):
             connector_key=connector_key,
             source_id=repo_source_id)
         if source_repo:
-            connector = connector_factory.get_connector(
-                connector_key=source_repo.connector_key,
-                join_this=session
-            )
-            if connector:
-                gitlab_repo = GitlabRepository(source_repo, connector)
-                pr_object = event.get('object_attributes')
-                pull_request_data = gitlab_repo.map_pull_request_info(pr_object)
+            if source_repo.import_state != RepositoryImportState.IMPORT_DISABLED:
+                connector = connector_factory.get_connector(
+                    connector_key=source_repo.connector_key,
+                    join_this=session
+                )
+                if connector:
+                    gitlab_repo = GitlabRepository(source_repo, connector)
+                    pr_object = event.get('object_attributes')
+                    pull_request_data = gitlab_repo.map_pull_request_info(pr_object)
 
-                result = api.sync_pull_requests(source_repo.key, [[pull_request_data]])
-                if result['success']:
-                    synced_prs = result['pull_requests']
-                    if len(synced_prs) > 0:
-                        if synced_prs[0]['is_new']:
-                            publish.pull_request_created_event(
-                                organization_key=source_repo.organization_key,
-                                repository_key=source_repo.key,
-                                pull_request_summaries=synced_prs
-                            )
-                        else:
-                            publish.pull_request_updated_event(
-                                organization_key=source_repo.organization_key,
-                                repository_key=source_repo.key,
-                                pull_request_summaries=synced_prs
-                            )
-                    return synced_prs
+                    result = api.sync_pull_requests(source_repo.key, [[pull_request_data]])
+                    if result['success']:
+                        synced_prs = result['pull_requests']
+                        if len(synced_prs) > 0:
+                            if synced_prs[0]['is_new']:
+                                publish.pull_request_created_event(
+                                    organization_key=source_repo.organization_key,
+                                    repository_key=source_repo.key,
+                                    pull_request_summaries=synced_prs
+                                )
+                            else:
+                                publish.pull_request_updated_event(
+                                    organization_key=source_repo.organization_key,
+                                    repository_key=source_repo.key,
+                                    pull_request_summaries=synced_prs
+                                )
+                        return synced_prs
 
 
 def handle_gitlab_event(connector_key, event_type, payload, channel=None):

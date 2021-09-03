@@ -46,14 +46,24 @@ def sync_pull_requests(repository_key, source_pull_requests):
         return db.failure_message('Sync Pull Requests', e)
 
 
-def get_pull_requests_to_sync(before=None, days=3, limit=100):
+def get_pull_requests_to_sync_with_source(before=None, days=3, limit=100):
     try:
         with db.orm_session() as session:
-            return pull_requests.get_pull_requests_to_sync(session, before, days, limit)
+            return pull_requests.get_pull_requests_to_sync_with_source(session, before, days, limit)
     except SQLAlchemyError as exc:
-        return db.process_exception("Get Pull Requests to Sync", exc)
+        return db.process_exception("Get Pull Requests to Sync with Source", exc)
     except Exception as e:
-        return db.failure_message('Get Pull Requests to Sync', e)
+        return db.failure_message('Get Pull Requests to Sync with Source', e)
+
+
+def get_pull_requests_to_sync_with_analytics(before=None, days=1, limit=100):
+    try:
+        with db.orm_session() as session:
+            return pull_requests.get_pull_requests_to_sync_with_analytics(session, before=before, days=days, limit=limit)
+    except SQLAlchemyError as exc:
+        return db.process_exception("Get Pull Requests to Sync with Analytics", exc)
+    except Exception as e:
+        return db.failure_message('Get Pull Requests to Sync with Analytics', e)
 
 
 def find_pull_request(pull_request_key):
@@ -117,3 +127,24 @@ def ack_commits_details_created(commit_keys):
         return db.process_exception("Ack Commits Created", exc)
     except Exception as e:
         return db.failure_message('Ack Commits Created', e)
+
+
+def ack_pull_request_event(pull_request_summaries):
+    try:
+        with db.orm_session() as session:
+            return pull_requests.ack_pull_request_event(session, pull_request_summaries)
+    except SQLAlchemyError as exc:
+        return db.process_exception("Ack pull request event", exc)
+    except Exception as e:
+        return db.failure_message('Ack pull request event', e)
+
+
+def get_pull_request_summary(pull_request_key, join_this=None):
+    try:
+        with db.orm_session(join_this) as session:
+            return pull_requests.get_pull_request_summary(session, pull_request_key)
+
+    except SQLAlchemyError as exc:
+        return db.process_exception("Get Pull Request Info", exc)
+    except Exception as e:
+        return db.failure_message('Get Pull Request Info', e)
