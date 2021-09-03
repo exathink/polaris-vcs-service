@@ -15,6 +15,7 @@ from polaris.vcs.db import api
 from polaris.repos.db.model import Repository
 from polaris.vcs import connector_factory
 from polaris.vcs.integrations.atlassian import BitBucketRepository
+from polaris.repos.db.schema import RepositoryImportState
 
 logger = logging.getLogger('polaris.vcs.integrations.bitbucket.message_handler')
 
@@ -51,32 +52,34 @@ def handle_pull_request_event(connector_key, event):
             source_id=repo_source_id
         )
         if source_repo:
-            connector = connector_factory.get_connector(
-                connector_key=source_repo.connector_key,
-                join_this=session
-            )
-            if connector:
-                bitbucket_repo = BitBucketRepository(source_repo, connector)
-                pr_data = payload['data']['pullrequest']
-                mapped_pr_data = bitbucket_repo.map_pull_request_info(pr_data)
+            if source_repo.import_state != RepositoryImportState.IMPORT_DISABLED:
+                connector = connector_factory.get_connector(
+                    connector_key=source_repo.connector_key,
+                    join_this=session
+                )
+                if connector:
+                    bitbucket_repo = BitBucketRepository(source_repo, connector)
+                    pr_data = payload['data']['pullrequest']
+                    mapped_pr_data = bitbucket_repo.map_pull_request_info(pr_data)
 
-                result = api.sync_pull_requests(source_repo.key, [[mapped_pr_data]])
-                if result['success']:
-                    synced_prs = result['pull_requests']
-                    if len(synced_prs) > 0:
-                        if synced_prs[0]['is_new']:
-                            publish.pull_request_created_event(
-                                organization_key=source_repo.organization_key,
-                                repository_key=source_repo.key,
-                                pull_request_summaries=synced_prs
-                            )
-                        else:
-                            publish.pull_request_updated_event(
-                                organization_key=source_repo.organization_key,
-                                repository_key=source_repo.key,
-                                pull_request_summaries=synced_prs
-                            )
-                    return synced_prs
+                    result = api.sync_pull_requests(source_repo.key, [[mapped_pr_data]])
+                    if result['success']:
+                        synced_prs = result['pull_requests']
+                        if len(synced_prs) > 0:
+                            if synced_prs[0]['is_new']:
+                                publish.pull_request_created_event(
+                                    organization_key=source_repo.organization_key,
+                                    repository_key=source_repo.key,
+                                    pull_request_summaries=synced_prs
+                                )
+                            else:
+                                publish.pull_request_updated_event(
+                                    organization_key=source_repo.organization_key,
+                                    repository_key=source_repo.key,
+                                    pull_request_summaries=synced_prs
+                                )
+                        return synced_prs
+
 
 
 
