@@ -123,7 +123,7 @@ class TestVcsConnector:
         repositories = response['data']['vcsConnector']['repositories']['edges']
         assert len(repositories) == 0
 
-@pytest.yield_fixture
+@pytest.fixture
 def setup_import_state_tests(setup_org_repo, setup_connectors):
     repository, organization = setup_org_repo
     connectors = setup_connectors

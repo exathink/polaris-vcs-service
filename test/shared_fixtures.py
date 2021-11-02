@@ -87,7 +87,7 @@ pull_requests_common_fields = dict(
 )
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def cleanup():
     yield
 
@@ -101,7 +101,7 @@ def cleanup():
     db.connection().execute("delete from repos.organizations")
 
 
-@pytest.yield_fixture()
+@pytest.fixture()
 def setup_org_repo(setup_schema, cleanup):
     with db.orm_session() as session:
         session.expire_on_commit = False
@@ -131,7 +131,7 @@ def setup_org_repo(setup_schema, cleanup):
     yield repository, organization
 
 
-@pytest.yield_fixture()
+@pytest.fixture()
 def setup_org_repo_bitbucket(setup_schema, cleanup):
     with db.orm_session() as session:
         session.expire_on_commit = False
@@ -161,7 +161,7 @@ def setup_org_repo_bitbucket(setup_schema, cleanup):
     yield repository, organization
 
 
-@pytest.yield_fixture()
+@pytest.fixture()
 def setup_org_repo_gitlab(setup_schema, cleanup):
     with db.orm_session() as session:
         session.expire_on_commit = False
@@ -191,7 +191,7 @@ def setup_org_repo_gitlab(setup_schema, cleanup):
     yield repository, organization
 
 
-@pytest.yield_fixture()
+@pytest.fixture()
 def setup_org_repo_no_connector(setup_schema, cleanup):
     with db.orm_session() as session:
         session.expire_on_commit = False
@@ -220,7 +220,7 @@ def setup_org_repo_no_connector(setup_schema, cleanup):
     yield repository, organization
 
 
-@pytest.yield_fixture()
+@pytest.fixture()
 def setup_commits(setup_org_repo):
     repository, organization = setup_org_repo
 
@@ -274,7 +274,7 @@ def setup_commits(setup_org_repo):
     yield inserted_commits
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def setup_connectors(setup_schema):
     with db.orm_session() as session:
         session.expire_on_commit = False
@@ -321,7 +321,7 @@ def setup_connectors(setup_schema):
     db.connection().execute(f"delete from integrations.connectors")
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def setup_sync_repos(setup_org_repo, setup_connectors):
     repository, organization = setup_org_repo
     connectors = setup_connectors
@@ -329,7 +329,7 @@ def setup_sync_repos(setup_org_repo, setup_connectors):
     yield organization.organization_key, connectors
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def setup_sync_repos_disabled(setup_org_repo, setup_connectors):
     repository, organization = setup_org_repo
     connectors = setup_connectors
@@ -341,7 +341,7 @@ def setup_sync_repos_disabled(setup_org_repo, setup_connectors):
     yield organization.organization_key, connectors
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def setup_sync_repos_gitlab(setup_org_repo_gitlab, setup_connectors):
     repository, organization = setup_org_repo_gitlab
     connectors = setup_connectors
@@ -349,7 +349,7 @@ def setup_sync_repos_gitlab(setup_org_repo_gitlab, setup_connectors):
     yield organization.organization_key, connectors
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def setup_sync_repos_gitlab_disabled(setup_org_repo_gitlab, setup_connectors):
     repository, organization = setup_org_repo_gitlab
     connectors = setup_connectors
@@ -360,7 +360,7 @@ def setup_sync_repos_gitlab_disabled(setup_org_repo_gitlab, setup_connectors):
     yield organization.organization_key, connectors
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def setup_sync_repos_bitbucket(setup_org_repo_bitbucket, setup_connectors):
     repository, organization = setup_org_repo_bitbucket
     connectors = setup_connectors
@@ -368,7 +368,7 @@ def setup_sync_repos_bitbucket(setup_org_repo_bitbucket, setup_connectors):
     yield organization.organization_key, connectors
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def setup_sync_repos_bitbucket_disabled(setup_org_repo_bitbucket, setup_connectors):
     repository, organization = setup_org_repo_bitbucket
     connectors = setup_connectors
@@ -380,7 +380,7 @@ def setup_sync_repos_bitbucket_disabled(setup_org_repo_bitbucket, setup_connecto
     yield organization.organization_key, connectors
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def setup_repo_waiting_for_update(setup_org_repo):
     repository, organization = setup_org_repo
     with db.orm_session() as session:

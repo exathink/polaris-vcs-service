@@ -15,7 +15,7 @@ from polaris.vcs.db import api
 from polaris.repos.db.schema import RepositoryImportState
 
 
-@pytest.yield_fixture()
+@pytest.fixture()
 def setup_bitbucket_repos(setup_schema, cleanup):
 
     with db.orm_session() as session:
