@@ -91,10 +91,8 @@ class GithubRepositoriesConnector(GithubConnector):
                 )
                 active_hook_id = new_webhook.id
             except GithubException as e:
-                # FIXME: In case we land into a scenario where we were not able to save the registered webhook id in db,
-                #  we may never be able to delete that and register new one.
-                #  To fix that we may need to make another API call here to get the active webhook id.
-                raise ProcessingException(f"Webhook registration failed due to: {e.data['errors']}")
+                logger.error(f"Failed to register webhooks for github repository with source_id: {repo_source_id}: {e.data.get('message')} error: {e.data.get('error')}")
+                raise ProcessingException(f"Webhook registration failed due to: {e.data.get('message')} error: {e.data.get('errors')}")
             return dict(
                 success=True,
                 active_webhook=active_hook_id,
