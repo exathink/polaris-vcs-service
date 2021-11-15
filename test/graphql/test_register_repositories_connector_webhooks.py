@@ -21,7 +21,7 @@ from polaris.common import db
 class TestRegisterRepositoriesConnectorWebhooks:
     class TestWithGitlabConnector:
 
-        @pytest.yield_fixture()
+        @pytest.fixture()
         def setup(self, setup_sync_repos_gitlab):
             organization_key, connectors = setup_sync_repos_gitlab
             repository_key = test_repository_key
@@ -200,7 +200,7 @@ class TestRegisterRepositoriesConnectorWebhooks:
                 assert status[0]['message'] == f"Could not find repository with key {test_repo_key}"
 
     class TestWithGithubConnector:
-        @pytest.yield_fixture()
+        @pytest.fixture()
         def setup(self, setup_sync_repos):
             organization_key, connectors = setup_sync_repos
             repository_key = test_repository_key

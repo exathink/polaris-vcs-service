@@ -59,7 +59,7 @@ setup(
     description='',
     long_description='',
     classifiers=[
-        'Programming Language :: Python :: 3.5'
+        'Programming Language :: Python :: 3.9'
     ],
     # Run time dependencies - we will assume pytest is dependency of all packages.
     install_requires=[

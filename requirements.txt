@@ -1,2 +1,4 @@
 argh
 pytest
+Flask
+uWSGI==2.0.17

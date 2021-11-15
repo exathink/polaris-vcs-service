@@ -33,7 +33,7 @@ mock_consumer.token_provider = get_token_provider()
 class TestAtlassianWebhookEvents:
     class TestBitBucketPullRequestEvents:
 
-        @pytest.yield_fixture()
+        @pytest.fixture()
         def setup(self, setup_sync_repos_bitbucket):
             organization_key, connectors = setup_sync_repos_bitbucket
             connector_key = bitbucket_connector_key
@@ -44,7 +44,7 @@ class TestAtlassianWebhookEvents:
 
         class TestPullRequestCreated:
 
-            @pytest.yield_fixture()
+            @pytest.fixture()
             def setup(self, setup):
                 fixture = setup
 
@@ -261,7 +261,7 @@ class TestAtlassianWebhookEvents:
 
             class TestPullRequestFulfilled:
 
-                @pytest.yield_fixture()
+                @pytest.fixture()
                 def setup(self, setup):
                     fixture = setup
 
@@ -539,7 +539,7 @@ class TestAtlassianWebhookEvents:
             class TestPullRequestCommentCreated:
                 # Should update last update date
 
-                @pytest.yield_fixture()
+                @pytest.fixture()
                 def setup(self, setup):
                     fixture = setup
 
@@ -836,7 +836,7 @@ class TestAtlassianWebhookEvents:
                         assert_topic_and_message(publish, VcsTopic, PullRequestsUpdated)
 
     class TestBitBucketPullRequestEventsWhenImportDisabled:
-        @pytest.yield_fixture()
+        @pytest.fixture()
         def setup(self, setup_sync_repos_bitbucket_disabled):
             organization_key, connectors = setup_sync_repos_bitbucket_disabled
             connector_key = bitbucket_connector_key
@@ -848,7 +848,7 @@ class TestAtlassianWebhookEvents:
 
         class TestPullRequestCreated:
 
-            @pytest.yield_fixture()
+            @pytest.fixture()
             def setup(self, setup):
                 fixture = setup
 

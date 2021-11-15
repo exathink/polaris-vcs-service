@@ -33,7 +33,7 @@ mock_consumer.token_provider = get_token_provider()
 class TestGithubWebhookEvents:
     class TestGithubPullRequestEvents:
 
-        @pytest.yield_fixture()
+        @pytest.fixture()
         def setup(self, setup_sync_repos):
             organization_key, connectors = setup_sync_repos
             connector_key = github_connector_key
@@ -46,7 +46,7 @@ class TestGithubWebhookEvents:
 
         class TestNewPullRequestEvent:
 
-            @pytest.yield_fixture()
+            @pytest.fixture()
             def setup(self, setup):
                 fixture = setup
 
@@ -420,7 +420,7 @@ class TestGithubWebhookEvents:
                     assert_topic_and_message(publish, VcsTopic, PullRequestsCreated)
 
             class TestUpdatePullRequestEvent:
-                @pytest.yield_fixture()
+                @pytest.fixture()
                 def setup(self, setup):
                     fixture = setup
 
@@ -833,7 +833,7 @@ class TestGithubWebhookEvents:
 
     class TestGithubRepoPushEvent:
 
-        @pytest.yield_fixture()
+        @pytest.fixture()
         def setup(self, setup_sync_repos):
             organization_key, connectors = setup_sync_repos
             connector_key = github_connector_key
@@ -874,7 +874,7 @@ class TestGithubWebhookEvents:
 
     class TestGithubPullRequestEventsWhenImportDisabled:
 
-        @pytest.yield_fixture()
+        @pytest.fixture()
         def setup(self, setup_sync_repos_disabled):
             organization_key, connectors = setup_sync_repos_disabled
             connector_key = github_connector_key
@@ -887,7 +887,7 @@ class TestGithubWebhookEvents:
 
         class TestNewPullRequestEvent:
 
-            @pytest.yield_fixture()
+            @pytest.fixture()
             def setup(self, setup):
                 fixture = setup
 

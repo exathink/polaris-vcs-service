@@ -22,7 +22,7 @@ bitbucket_connector_key = uuid.uuid4()
 bitbucket_repo_source_id = uuid.uuid4()
 
 
-@pytest.yield_fixture()
+@pytest.fixture()
 def setup_repo_waiting_for_update(setup_schema, cleanup):
     with db.orm_session() as session:
         session.expire_on_commit = False

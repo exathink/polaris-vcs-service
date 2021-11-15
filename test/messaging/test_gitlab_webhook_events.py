@@ -33,7 +33,7 @@ mock_consumer.token_provider = get_token_provider()
 class TestGitlabWebhookEvents:
     class TestGitlabMergeRequestEvents:
 
-        @pytest.yield_fixture()
+        @pytest.fixture()
         def setup(self, setup_sync_repos_gitlab):
             organization_key, connectors = setup_sync_repos_gitlab
             connector_key = gitlab_connector_key
@@ -46,7 +46,7 @@ class TestGitlabWebhookEvents:
 
         class TestNewPullRequestEvent:
 
-            @pytest.yield_fixture()
+            @pytest.fixture()
             def setup(self, setup):
                 fixture = setup
 
@@ -254,7 +254,7 @@ class TestGitlabWebhookEvents:
                     assert_topic_and_message(publish, VcsTopic, PullRequestsCreated)
 
             class TestUpdatePullRequestEvent:
-                @pytest.yield_fixture()
+                @pytest.fixture()
                 def setup(self, setup):
                     fixture = setup
 
@@ -440,7 +440,7 @@ class TestGitlabWebhookEvents:
 
 
     class TestGitlabMergeRequestEventsWhenImportDisabled:
-        @pytest.yield_fixture()
+        @pytest.fixture()
         def setup(self, setup_sync_repos_gitlab_disabled):
             organization_key, connectors = setup_sync_repos_gitlab_disabled
             connector_key = gitlab_connector_key
@@ -453,7 +453,7 @@ class TestGitlabWebhookEvents:
 
         class TestNewPullRequestEvent:
 
-            @pytest.yield_fixture()
+            @pytest.fixture()
             def setup(self, setup):
                 fixture = setup
 
