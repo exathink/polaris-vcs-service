@@ -34,7 +34,7 @@ def handle_gitlab_pull_request_event(connector_key, payload, channel=None):
             connector_key=connector_key,
             source_id=repo_source_id)
         if source_repo:
-            if source_repo.import_state != RepositoryImportState.IMPORT_DISABLED:
+            if source_repo.import_state != RepositoryImportState.IMPORT_DISABLED and source_repo.last_imported is not None:
                 connector = connector_factory.get_connector(
                     connector_key=source_repo.connector_key,
                     join_this=session

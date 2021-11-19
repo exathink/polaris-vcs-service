@@ -117,6 +117,7 @@ def setup_org_repo(setup_schema, cleanup):
             name=test_repository_name,
             source_id=test_repository_source_id,
             import_state=RepositoryImportState.CHECK_FOR_UPDATES,
+            last_imported=datetime.utcnow(),
             description='A neat new repo',
             integration_type=VcsIntegrationTypes.github.value,
             url='https://foo.bar.com'
@@ -147,6 +148,7 @@ def setup_org_repo_bitbucket(setup_schema, cleanup):
             name=test_repository_name,
             source_id=test_repository_source_id,
             import_state=RepositoryImportState.CHECK_FOR_UPDATES,
+            last_imported=datetime.utcnow(),
             description='A neat new repo',
             integration_type=VcsIntegrationTypes.bitbucket.value,
             url='https://foo.bar.com'
@@ -177,6 +179,7 @@ def setup_org_repo_gitlab(setup_schema, cleanup):
             name=test_repository_name,
             source_id=test_repository_source_id,
             import_state=RepositoryImportState.CHECK_FOR_UPDATES,
+            last_imported=datetime.utcnow(),
             description='A neat new repo',
             integration_type=VcsIntegrationTypes.gitlab.value,
             url='https://foo.bar.com'
@@ -334,11 +337,7 @@ def setup_sync_repos_disabled(setup_org_repo, setup_connectors):
     repository, organization = setup_org_repo
     connectors = setup_connectors
 
-    with db.orm_session() as session:
-        session.add(repository)
-        repository.import_state = RepositoryImportState.IMPORT_DISABLED
-
-    yield organization.organization_key, connectors
+    yield organization.organization_key, connectors, repository
 
 
 @pytest.fixture
@@ -353,11 +352,9 @@ def setup_sync_repos_gitlab(setup_org_repo_gitlab, setup_connectors):
 def setup_sync_repos_gitlab_disabled(setup_org_repo_gitlab, setup_connectors):
     repository, organization = setup_org_repo_gitlab
     connectors = setup_connectors
-    with db.orm_session() as session:
-        session.add(repository)
-        repository.import_state = RepositoryImportState.IMPORT_DISABLED
 
-    yield organization.organization_key, connectors
+
+    yield organization.organization_key, connectors, repository
 
 
 @pytest.fixture
@@ -373,11 +370,9 @@ def setup_sync_repos_bitbucket_disabled(setup_org_repo_bitbucket, setup_connecto
     repository, organization = setup_org_repo_bitbucket
     connectors = setup_connectors
 
-    with db.orm_session() as session:
-        session.add(repository)
-        repository.import_state = RepositoryImportState.IMPORT_DISABLED
 
-    yield organization.organization_key, connectors
+
+    yield organization.organization_key, connectors, repository
 
 
 @pytest.fixture

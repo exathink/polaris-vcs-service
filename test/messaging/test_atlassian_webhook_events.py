@@ -838,8 +838,12 @@ class TestAtlassianWebhookEvents:
     class TestBitBucketPullRequestEventsWhenImportDisabled:
         @pytest.fixture()
         def setup(self, setup_sync_repos_bitbucket_disabled):
-            organization_key, connectors = setup_sync_repos_bitbucket_disabled
+            organization_key, connectors, repository = setup_sync_repos_bitbucket_disabled
             connector_key = bitbucket_connector_key
+
+            with db.orm_session() as session:
+                session.add(repository)
+                repository.import_state = RepositoryImportState.IMPORT_DISABLED
 
             yield Fixture(
                 organization_key=organization_key,
@@ -1037,6 +1041,232 @@ class TestAtlassianWebhookEvents:
                 )
 
             def it_ignores_the_event_when_import_is_disabled(self, setup):
+                fixture = setup
+                bitbucket_pull_request_message = fake_send(
+                    AtlassianConnectRepositoryEvent(
+                        send=dict(
+                            atlassian_event_type="pullrequest:created",
+                            atlassian_connector_key=fixture.connector_key,
+                            atlassian_event=json.dumps(fixture.new_payload)
+                        )
+                    )
+                )
+                publisher = mock_publisher()
+                channel = mock_channel()
+
+                with patch('polaris.vcs.messaging.publish.publish') as publish:
+                    subscriber = VcsTopicSubscriber(channel, publisher=publisher)
+                    subscriber.consumer_context = mock_consumer
+                    message = subscriber.dispatch(channel, bitbucket_pull_request_message)
+                    assert not message
+                    publisher.assert_not_called()
+
+    class TestBitBucketPullRequestEventsWhenNeverImported:
+        @pytest.fixture()
+        def setup(self, setup_sync_repos_bitbucket_disabled):
+            organization_key, connectors, repository = setup_sync_repos_bitbucket_disabled
+            connector_key = bitbucket_connector_key
+
+            with db.orm_session() as session:
+                session.add(repository)
+                repository.last_imported = None
+
+            yield Fixture(
+                organization_key=organization_key,
+                connector_key=connector_key,
+            )
+
+        class TestPullRequestCreated:
+
+            @pytest.fixture()
+            def setup(self, setup):
+                fixture = setup
+
+                payload = {
+                    "event": "pullrequest:created",
+                    "data": {
+                        "pullrequest": {
+
+                            "type": "pullrequest",
+                            "description": "",
+                            "links": {
+                                "decline": {
+                                    "href": "https://api.bitbucket.org/2.0/repositories/krishnaku/polaris-bitbucket-test-1/pullrequests/6/decline"
+                                },
+                                "diffstat": {
+                                    "href": "https://api.bitbucket.org/2.0/repositories/krishnaku/polaris-bitbucket-test-1/diffstat/krishnaku/polaris-bitbucket-test-1:f1eb826ca587%0Dafd3fcad0f30?from_pullrequest_id=6"
+                                },
+                                "commits": {
+                                    "href": "https://api.bitbucket.org/2.0/repositories/krishnaku/polaris-bitbucket-test-1/pullrequests/6/commits"
+                                },
+                                "self": {
+                                    "href": "https://api.bitbucket.org/2.0/repositories/krishnaku/polaris-bitbucket-test-1/pullrequests/6"
+                                },
+                                "comments": {
+                                    "href": "https://api.bitbucket.org/2.0/repositories/krishnaku/polaris-bitbucket-test-1/pullrequests/6/comments"
+                                },
+                                "merge": {
+                                    "href": "https://api.bitbucket.org/2.0/repositories/krishnaku/polaris-bitbucket-test-1/pullrequests/6/merge"
+                                },
+                                "html": {
+                                    "href": "https://bitbucket.org/krishnaku/polaris-bitbucket-test-1/pull-requests/6"
+                                },
+                                "activity": {
+                                    "href": "https://api.bitbucket.org/2.0/repositories/krishnaku/polaris-bitbucket-test-1/pullrequests/6/activity"
+                                },
+                                "request-changes": {
+                                    "href": "https://api.bitbucket.org/2.0/repositories/krishnaku/polaris-bitbucket-test-1/pullrequests/6/request-changes"
+                                },
+                                "diff": {
+                                    "href": "https://api.bitbucket.org/2.0/repositories/krishnaku/polaris-bitbucket-test-1/diff/krishnaku/polaris-bitbucket-test-1:f1eb826ca587%0Dafd3fcad0f30?from_pullrequest_id=6"
+                                },
+                                "approve": {
+                                    "href": "https://api.bitbucket.org/2.0/repositories/krishnaku/polaris-bitbucket-test-1/pullrequests/6/approve"
+                                },
+                                "statuses": {
+                                    "href": "https://api.bitbucket.org/2.0/repositories/krishnaku/polaris-bitbucket-test-1/pullrequests/6/statuses"
+                                }
+                            },
+                            "title": "Testing all pullrequest events",
+                            "close_source_branch": False,
+                            "reviewers": [],
+                            "id": 6,
+                            "destination": {
+                                "commit": {
+                                    "hash": "afd3fcad0f30",
+                                    "type": "commit",
+                                    "links": {
+                                        "self": {
+                                            "href": "https://api.bitbucket.org/2.0/repositories/krishnaku/polaris-bitbucket-test-1/commit/afd3fcad0f30"
+                                        },
+                                        "html": {
+                                            "href": "https://bitbucket.org/krishnaku/polaris-bitbucket-test-1/commits/afd3fcad0f30"
+                                        }
+                                    }
+                                },
+                                "repository": {
+                                    "links": {
+                                        "self": {
+                                            "href": "https://api.bitbucket.org/2.0/repositories/krishnaku/polaris-bitbucket-test-1"
+                                        },
+                                        "html": {
+                                            "href": "https://bitbucket.org/krishnaku/polaris-bitbucket-test-1"
+                                        },
+                                        "avatar": {
+                                            "href": "https://bytebucket.org/ravatar/%7B9b9b3553-735b-486a-83fa-f5a404c48a72%7D?ts=default"
+                                        }
+                                    },
+                                    "type": "repository",
+                                    "name": "polaris-bitbucket-test-1",
+                                    "full_name": "krishnaku/polaris-bitbucket-test-1",
+                                    "uuid": test_repository_source_id
+                                },
+                                "branch": {
+                                    "name": "master"
+                                }
+                            },
+                            "created_on": "2021-01-04T14:02:22.920738+00:00",
+                            "summary": {
+                                "raw": "",
+                                "markup": "markdown",
+                                "html": "",
+                                "type": "rendered"
+                            },
+                            "source": {
+                                "commit": {
+                                    "hash": "f1eb826ca587",
+                                    "type": "commit",
+                                    "links": {
+                                        "self": {
+                                            "href": "https://api.bitbucket.org/2.0/repositories/krishnaku/polaris-bitbucket-test-1/commit/f1eb826ca587"
+                                        },
+                                        "html": {
+                                            "href": "https://bitbucket.org/krishnaku/polaris-bitbucket-test-1/commits/f1eb826ca587"
+                                        }
+                                    }
+                                },
+                                "repository": {
+                                    "links": {
+                                        "self": {
+                                            "href": "https://api.bitbucket.org/2.0/repositories/krishnaku/polaris-bitbucket-test-1"
+                                        },
+                                        "html": {
+                                            "href": "https://bitbucket.org/krishnaku/polaris-bitbucket-test-1"
+                                        },
+                                        "avatar": {
+                                            "href": "https://bytebucket.org/ravatar/%7B9b9b3553-735b-486a-83fa-f5a404c48a72%7D?ts=default"
+                                        }
+                                    },
+                                    "type": "repository",
+                                    "name": "polaris-bitbucket-test-1",
+                                    "full_name": "krishnaku/polaris-bitbucket-test-1",
+                                    "uuid": test_repository_source_id
+                                },
+                                "branch": {
+                                    "name": "test-1"
+                                }
+                            },
+                            "comment_count": 0,
+                            "state": "OPEN",
+                            "task_count": 0,
+                            "participants": [],
+                            "reason": "",
+                            "updated_on": "2021-01-04T14:02:22.991128+00:00",
+                            "merge_commit": None,
+                            "closed_by": None
+                        },
+                        "repository": {
+                            "scm": "git",
+                            "website": None,
+                            "uuid": test_repository_source_id,
+                            "project": {
+                                "links": {
+                                    "self": {
+                                        "href": "https://api.bitbucket.org/2.0/workspaces/krishnaku/projects/PROJ"
+                                    },
+                                    "html": {
+                                        "href": "https://bitbucket.org/krishnaku/workspace/projects/PROJ"
+                                    },
+                                    "avatar": {
+                                        "href": "https://bitbucket.org/account/user/krishnaku/projects/PROJ/avatar/32?ts=1596678025"
+                                    }
+                                },
+                                "type": "project",
+                                "name": "Polaris test",
+                                "key": "PROJ",
+                                "uuid": "{de521cd8-419b-4073-815b-26cd92613a71}"
+                            },
+                            "workspace": {
+                                "slug": "krishnaku",
+                                "type": "workspace",
+                                "name": "KrishnaKum",
+                                "links": {
+                                    "self": {
+                                        "href": "https://api.bitbucket.org/2.0/workspaces/krishnaku"
+                                    },
+                                    "html": {
+                                        "href": "https://bitbucket.org/krishnaku/"
+                                    },
+                                    "avatar": {
+                                        "href": "https://bitbucket.org/workspaces/krishnaku/avatar/?ts=1608842661"
+                                    }
+                                },
+                                "uuid": "{87e0d94b-1037-4a87-8e02-fde842accb37}"
+                            },
+                            "type": "repository",
+                            "is_private": True,
+                            "name": "polaris-bitbucket-test-1"
+                        },
+
+                    }
+                }
+
+                yield Fixture(
+                    parent=fixture,
+                    new_payload=payload
+                )
+
+            def it_ignores_the_event_when_repository_has_never_been_imported(self, setup):
                 fixture = setup
                 bitbucket_pull_request_message = fake_send(
                     AtlassianConnectRepositoryEvent(
