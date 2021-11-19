@@ -7,6 +7,7 @@
 # confidential.
 
 # Author: Krishna Kumar
+import uuid
 
 import pytest
 from test.shared_fixtures import *
@@ -41,6 +42,53 @@ class TestSyncGithubRepositories:
         # extra here.
         assert db.connection().execute(f"select count(id) from repos.repositories "
                                        f"where connector_key='{connector_key}'").scalar() == 2
+
+    def it_does_not_import_a_new_repository_if_it_has_already_been_imported_under_a_different_connector(self, setup_sync_repos):
+        organization_key, connectors = setup_sync_repos
+        connector_key = connectors['github']
+
+        source_repos = [
+            dict(
+                **repositories_common_fields
+            )
+        ]
+        # import once
+        result = api.sync_repositories(organization_key, connector_key, source_repos)
+
+        # import the same repo again under a different connnector key
+        result = api.sync_repositories(organization_key, uuid.uuid4(), source_repos)
+
+        assert result['success']
+        assert len(result['repositories']) == 0
+
+
+
+        assert db.connection().execute(f"select count(id) from repos.repositories "
+                                       f"where connector_key='{connector_key}'").scalar() == 2
+
+    def it_imports_the_same_repo_again_under_a_different_organization(self, setup_sync_repos):
+        organization_key, connectors = setup_sync_repos
+        connector_key = connectors['github']
+
+        source_repos = [
+            dict(
+                **repositories_common_fields
+            )
+        ]
+        # import once
+        result = api.sync_repositories(organization_key, connector_key, source_repos)
+
+        new_organization = uuid.uuid4()
+        # import the same repo again under a different connnector key
+        result = api.sync_repositories(new_organization, uuid.uuid4(), source_repos)
+
+        assert result['success']
+        assert len(result['repositories']) == 1
+
+
+
+        assert db.connection().execute(f"select count(id) from repos.repositories "
+                                       f"where organization_key='{str(new_organization)}'").scalar() == 1
 
     def it_is_idempotent(self, setup_sync_repos):
         organization_key, connectors = setup_sync_repos

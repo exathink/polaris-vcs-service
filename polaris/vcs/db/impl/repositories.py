@@ -12,13 +12,14 @@ import logging
 
 from datetime import datetime
 
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, Column, Boolean
 from sqlalchemy.dialects.postgresql import insert
 
 from polaris.common import db
 from polaris.repos.db.model import repositories, Repository
 from polaris.repos.db.schema import RepositoryImportState
 from polaris.utils.exceptions import ProcessingException
+from polaris.utils.collections import find
 from polaris.common.db import row_proxy_to_dict
 
 log = logging.getLogger('polaris.vcs.db.impl.repositories')
@@ -27,6 +28,11 @@ log = logging.getLogger('polaris.vcs.db.impl.repositories')
 def sync_repositories(session, organization_key, connector_key, source_repositories):
     if organization_key is not None:
         if len(source_repositories) > 0:
+            extra_columns = [
+                    Column('exists_in_organization', Boolean())
+            ]
+            extra_column_names = [column.name for column in extra_columns]
+
             repositories_temp = db.temp_table_from(
                 repositories,
                 table_name='repositories_temp',
@@ -39,7 +45,8 @@ def sync_repositories(session, organization_key, connector_key, source_repositor
                     repositories.c.latest_commit,
                     repositories.c.failures_since_last_checked,
                     repositories.c.organization_id
-                ]
+                ],
+                extra_columns=extra_columns
             )
             repositories_temp.create(session.connection(), checkfirst=True)
             session.connection().execute(
@@ -54,12 +61,39 @@ def sync_repositories(session, organization_key, connector_key, source_repositor
                         created_at=datetime.utcnow(),
                         updated_at=datetime.utcnow(),
                         source_data={},
+                        exists_in_organization=False,
                         **source_repo
                     )
                     for source_repo in source_repositories
                 ])
             )
-            repositories_before_insert = session.connection().execute(
+            # We need to prevent multiple copies of the same repo being imported into the same
+            # organization under different connectors. Ideally we would do this via a database constraint, but for legacy reasons,
+            # we used to allow this early on, and it is hard to clean up old data without affecting active
+            # accounts, so we are checking explicitly for this here.
+
+            exists_in_organization = select([repositories_temp.c.key]).select_from(
+                repositories_temp.join(
+                    repositories,
+                    and_(
+                        repositories_temp.c.organization_key == repositories.c.organization_key,
+                        repositories_temp.c.source_id == repositories.c.source_id,
+                        # note: this check is important, otherwise the operation will not update
+                        # existing repos under the same connector.
+                        repositories_temp.c.connector_key != repositories.c.connector_key
+                    )
+                )
+            ).cte()
+
+            session.connection().execute(
+                repositories_temp.update().values(
+                    exists_in_organization=True
+                ).where(
+                    repositories_temp.c.key == exists_in_organization.c.key
+                )
+            )
+            # This list will be used to return values from the call.
+            repositories_to_insert = session.connection().execute(
                 select([*repositories_temp.columns, repositories.c.key.label('current_key')]).select_from(
                     repositories_temp.outerjoin(
                         repositories,
@@ -68,12 +102,17 @@ def sync_repositories(session, organization_key, connector_key, source_repositor
                             repositories_temp.c.source_id == repositories.c.source_id
                         )
                     )
+                ).where(
+                    repositories_temp.c.exists_in_organization == False
                 )
             ).fetchall()
 
+            repositories_columns = [column for column in repositories_temp.columns if column.name not in extra_column_names]
             upsert = insert(repositories).from_select(
-                [column.name for column in repositories_temp.columns],
-                select([repositories_temp])
+                [column.name for column in repositories_columns],
+                select(repositories_columns).where(
+                    repositories_temp.c.exists_in_organization == False
+                )
             )
 
             session.connection().execute(
@@ -105,7 +144,7 @@ def sync_repositories(session, organization_key, connector_key, source_repositor
                         public=repository.public,
                         organization_key=organization_key,
                     )
-                    for repository in repositories_before_insert
+                    for repository in repositories_to_insert
                 ])
         else:
             return dict(
