@@ -107,7 +107,7 @@ class VcsAnalyticsSyncAgent(Agent):
             if self.exit_signal_received:
                 break
             # get the next batch
-            result = api.get_pull_requests_to_sync_with_analytics(before=last_updated, limit=limit)
+            result = api.get_pull_requests_to_sync_with_analytics(before=last_updated, days=days, limit=limit)
 
         return True
 

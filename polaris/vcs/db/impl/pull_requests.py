@@ -186,12 +186,13 @@ def get_pull_request_summary(session, pull_request_key):
 def get_pull_requests_to_sync_with_analytics(session, before=None, days=1, threshold_minutes=15, limit=100):
     if before is None:
         # by default, we dont sync anything that was updated in the last threshold_minutes minutes
+        # this way we dont try and sync things that were very recently updated.
         before = datetime.utcnow() - timedelta(minutes=threshold_minutes)
 
-    # we only sync items that have been out of sync for a certain window. This ensures
-    # that we dont keep trying to sync things indefinitely if they are in a permanently failed state.
-    after = datetime.utcnow() - timedelta(days=days)
+    # we pick only the items in the window [after, before]
+    after = before - timedelta(days=days)
 
+    log.info(f"Fetching candidates to sync in the window [ {after} , {before} ]")
     pull_requests_to_sync = [
         dict(
             organization_key=result.organization_key,
@@ -213,15 +214,27 @@ def get_pull_requests_to_sync_with_analytics(session, before=None, days=1, thres
                     repositories, pull_requests.c.repository_id == repositories.c.id
                 )
             ).where(
-                and_(
-                    pull_requests.c.source_last_updated < before,
-                    pull_requests.c.source_last_updated >= after,
-                    or_(
+                or_(
+                    # if it has never been synced and it is in the window
+                    # select it always
+                    and_(
                         pull_requests.c.analytics_last_updated == None,
-                        pull_requests.c.source_last_updated > pull_requests.c.analytics_last_updated
+                        pull_requests.c.source_last_updated < before
+                    ),
+                    # otherwise select the ones ones that have been successfully
+                    # synced at least once, but the last analytics_sync was before the latest
+                    # source sync, and the last source update is in the window.
+                    and_(
+                      pull_requests.c.analytics_last_updated != None,
+                      pull_requests.c.source_last_updated < before,
+                      pull_requests.c.source_last_updated >= after,
+                      pull_requests.c.source_last_updated > pull_requests.c.analytics_last_updated
                     )
                 )
+
             ).order_by(
+                # order by source_last_updated, so we can page through the results
+                # if a limit is provided.
                 pull_requests.c.source_last_updated.desc()
             ).limit(
                 limit
