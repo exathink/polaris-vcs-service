@@ -192,7 +192,6 @@ def get_pull_requests_to_sync_with_analytics(session, before=None, days=1, thres
     # we pick only the items in the window [after, before]
     after = before - timedelta(days=days)
 
-    log.info(f"Fetching candidates to sync in the window [ {after} , {before} ]")
     pull_requests_to_sync = [
         dict(
             organization_key=result.organization_key,
@@ -218,6 +217,7 @@ def get_pull_requests_to_sync_with_analytics(session, before=None, days=1, thres
                     # if it has never been synced and it is in the window
                     # select it always
                     and_(
+                        repositories.c.import_state == RepositoryImportState.CHECK_FOR_UPDATES,
                         pull_requests.c.analytics_last_updated == None,
                         pull_requests.c.source_last_updated < before
                     ),
@@ -225,6 +225,7 @@ def get_pull_requests_to_sync_with_analytics(session, before=None, days=1, thres
                     # synced at least once, but the last analytics_sync was before the latest
                     # source sync, and the last source update is in the window.
                     and_(
+                      repositories.c.import_state == RepositoryImportState.CHECK_FOR_UPDATES,
                       pull_requests.c.analytics_last_updated != None,
                       pull_requests.c.source_last_updated < before,
                       pull_requests.c.source_last_updated >= after,
