@@ -27,8 +27,9 @@ class GithubRepositoriesConnector(GithubConnector):
         self.webhook_events = ['push', 'pull_request']
 
     def map_repository_info(self, repo):
+
         return dict(
-            name=repo.name,
+            name=repo.name if not repo.fork else repo.full_name,
             url=repo.html_url,
             public=not repo.private,
             vendor='git',
@@ -40,6 +41,9 @@ class GithubRepositoriesConnector(GithubConnector):
                 ssh_url=repo.ssh_url,
                 homepage=repo.homepage,
                 default_branch=repo.default_branch,
+                name=repo.name,
+                full_name=repo.full_name,
+                fork=repo.fork,
             ),
         )
 
