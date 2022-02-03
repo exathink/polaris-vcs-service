@@ -15,6 +15,7 @@ stages:
   - test
   - push
   - cleanup
+  - deploy
 
 build-package-image:
   stage: build
@@ -53,5 +54,18 @@ cleanup:
   stage: cleanup
   script: package down
 
+deploy:
+  stage: deploy
+  environment:
+    name: production
 
+  tags:
+      - polaris-runner
+  script:
+      - echo "deploy to prod"
+      - package aws deploy
+
+  rules:
+      - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+        when: manual
     
