@@ -73,5 +73,5 @@ deploy:
       - if: $CI_COMMIT_MESSAGE =~ /\[manual]/
         when: manual
 
-      if: $CI_COMMIT_BRANCH == 'production'
+      - if: $CI_COMMIT_BRANCH == 'production'
     
