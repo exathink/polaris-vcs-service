@@ -21,6 +21,7 @@ build-package-image:
   stage: build
   only:
     - master
+    - production
   tags:
     - polaris-runner
   script:
@@ -32,6 +33,7 @@ test:
   stage: test
   only:
     - master
+    - production
   tags:
     - polaris-runner
   script:
@@ -41,6 +43,7 @@ push:
   stage: push
   only:
     - master
+    - production
   tags:
     - polaris-runner
   script:
@@ -49,6 +52,7 @@ push:
 cleanup:
   only:
     - master
+    - production
   tags:
     - polaris-runner
   stage: cleanup
@@ -65,7 +69,6 @@ deploy:
       - echo "deploy to prod"
       - package aws deploy
 
-  rules:
-      - if: $CI_COMMIT_BRANCH == 'production'
-        when: always
+  only:
+    - production
     
