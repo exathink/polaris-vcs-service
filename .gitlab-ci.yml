@@ -69,6 +69,9 @@ deploy:
       - echo "deploy to prod"
       - package aws deploy
 
-  only:
-    - production
+  rules:
+      - if: $CI_COMMIT_MESSAGE =~ /\[manual]/
+        when: manual
+
+      if: $CI_COMMIT_BRANCH == 'production'
     
