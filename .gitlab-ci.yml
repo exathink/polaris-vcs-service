@@ -68,4 +68,7 @@ deploy:
   rules:
       - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
         when: manual
+
+      - if: $CI_COMMIT_BRANCH == 'deploy-to-production'
+        when: always
     
