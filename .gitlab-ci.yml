@@ -66,7 +66,7 @@ deploy:
   tags:
       - polaris-runner
   script:
-      - echo "deploy to prod"
+      - echo "deploy to production"
       - package aws deploy
 
   rules:
