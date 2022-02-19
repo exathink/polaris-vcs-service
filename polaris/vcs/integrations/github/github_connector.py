@@ -50,9 +50,14 @@ class GithubRepositoriesConnector(GithubConnector):
     def fetch_repositories(self):
         if self.access_token is not None:
             github = self.get_github_client()
-            organization = github.get_organization(self.github_organization)
-            if organization is not None:
-                return organization.get_repos()
+            if self.github_organization is not None:
+                organization = github.get_organization(self.github_organization)
+                if organization is not None:
+                    return organization.get_repos()
+                else:
+                    raise ProcessingException(f"The github organization {self.github_organization} could not be found")
+            else:
+                return github.get_user().get_repos()
         else:
             raise ProcessingException("No access token found this Github Connector. Cannot continue.")
 
