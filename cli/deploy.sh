@@ -10,7 +10,7 @@ package aws deploy-task-definition polaris-vcs-service
 package aws deploy-task-definition polaris-vcs-listener
 
 echo "Running migrations"
-# package aws run-task polaris-vcs-db-migrator
+package aws run-task polaris-vcs-db-migrator
 
 echo "Deploying Services.."
 package aws deploy-services polaris-vcs-service polaris.auto-scaling-group   polaris-vcs-listener polaris-vcs-service
