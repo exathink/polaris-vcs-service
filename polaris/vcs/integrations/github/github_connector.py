@@ -62,13 +62,19 @@ class GithubRepositoriesConnector(GithubConnector):
             raise ProcessingException("No access token found this Github Connector. Cannot continue.")
 
     def fetch_repositories_from_source(self):
+        logger.info(f'Refresh Repositories: Fetching repositories for connector {self.name} in organization {self.organization_key}')
         repos_paginator = self.fetch_repositories()
+        count = 0
         while repos_paginator._couldGrow():
-            yield [
+            repos = [
                 self.map_repository_info(repo)
                 for repo in repos_paginator._fetchNextPage()
                 if not repo.archived
             ]
+            count = count + len(repos)
+            yield repos
+
+        logger.info(f"Refresh Repositories: Fetched {count} repositories in total for connector {self.name} in organization {self.organization_key}")
 
     def register_repository_webhooks(self, repo_source_id, registered_webhooks):
         if self.access_token is not None:
