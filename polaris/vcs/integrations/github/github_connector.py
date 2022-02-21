@@ -29,7 +29,7 @@ class GithubRepositoriesConnector(GithubConnector):
     def map_repository_info(self, repo):
 
         return dict(
-            name=repo.name if not repo.fork else repo.full_name,
+            name=repo.name if not repo.fork else repo.full_name.replace('/', ' <- ') if repo.full_name else repo.name,
             url=repo.html_url,
             public=not repo.private,
             vendor='git',
