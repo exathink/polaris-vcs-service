@@ -45,9 +45,9 @@ def sync_repository_forks(connector_key, repository_key, join_this=None):
             join_this=session
         )
         if connector:
-            if hasattr(connector, 'fetch_repository_forks'):
-                repository = repository_factory.get_provider_impl(repository_key, join_this=session)
-                if repository is not None:
+            repository = repository_factory.get_provider_impl(repository_key, join_this=session)
+            if repository is not None:
+                if hasattr(repository, 'fetch_repository_forks'):
                     for source_repositories in repository.fetch_repository_forks():
                         yield polaris.vcs.db.api.sync_repositories(
                             connector.organization_key,
@@ -55,9 +55,11 @@ def sync_repository_forks(connector_key, repository_key, join_this=None):
                             source_repositories
                         )
                 else:
-                    raise ProcessingException(f'Repository with key {repository_key} was not found')
+                    raise ProcessingException(
+                        'The fetch repository forks operation is not implemented for this connector')
             else:
-                raise ProcessingException('The fetch repository forks operation is not implemented for this connector')
+                raise ProcessingException(f'Repository with key {repository_key} was not found')
+
 
 def sync_pull_requests(repository_key, pull_request_key=None):
     log.info(f'Sync pull requests starting')
