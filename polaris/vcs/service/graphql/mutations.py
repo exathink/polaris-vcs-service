@@ -54,6 +54,28 @@ class RefreshConnectorRepositories(graphene.Mutation):
             )
 
 
+class SyncRepositoryForksInput(graphene.InputObjectType):
+    connector_key = graphene.String(required=True)
+    repository_key = graphene.String(required=True)
+
+
+class SyncRepositoryForks(graphene.Mutation):
+    class Arguments:
+        fetch_repository_forks_input = SyncRepositoryForksInput(required=True)
+
+    success = graphene.Boolean()
+    num_repositories = graphene.String()
+
+    def mutate(self, info, fetch_repository_forks_input):
+        connector_key = fetch_repository_forks_input.connector_key
+        repository_key = fetch_repository_forks_input.repository_key
+        logger.info(f"Processing Fetch Repository Forks for repository {repository_key}")
+        count = 0
+        for result in commands.sync_repository_forks(connector_key, repository_key):
+            count  = count + len(result['repositories'])
+
+        return SyncRepositoryForks(success=True, num_repositories=count)
+
 class ImportRepositoriesInput(graphene.InputObjectType):
     organization_key = graphene.String(required=True)
     connector_key = graphene.String(required=True)
