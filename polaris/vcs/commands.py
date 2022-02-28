@@ -38,6 +38,26 @@ def sync_repositories(connector_key, tracking_receipt_key=None):
                     source_repositories
                 )
 
+def sync_repository_forks(connector_key, repository_key, join_this=None):
+    with db.orm_session(join_this) as session:
+        connector = connector_factory.get_connector(
+            connector_key=connector_key,
+            join_this=session
+        )
+        if connector:
+            if hasattr(connector, 'fetch_repository_forks'):
+                repository = repository_factory.get_provider_impl(repository_key, join_this=session)
+                if repository is not None:
+                    for source_repositories in repository.fetch_repository_forks():
+                        yield polaris.vcs.db.api.sync_repositories(
+                            connector.organization_key,
+                            connector.key,
+                            source_repositories
+                        )
+                else:
+                    raise ProcessingException(f'Repository with key {repository_key} was not found')
+            else:
+                raise ProcessingException('The fetch repository forks operation is not implemented for this connector')
 
 def sync_pull_requests(repository_key, pull_request_key=None):
     log.info(f'Sync pull requests starting')
@@ -49,7 +69,7 @@ def sync_pull_requests(repository_key, pull_request_key=None):
             if pull_request is not None:
                 yield api.sync_pull_requests(
                     repository_key,
-                    repository_provider.fetch_pull_requests_from_source(source_id=pull_request.api_id)
+                    repository_provider.fetch_pull_requests_from_source(pull_request_source_id=pull_request.api_id)
                 )
             else:
                 raise ProcessingException(f'Could not find pull request with key {pull_request_key}')
@@ -149,3 +169,5 @@ def test_vcs_connector(connector_key, join_this=None):
 
 def get_pull_request_summary(pull_request_key, join_this=None):
     return api.get_pull_request_summary(pull_request_key, join_this)
+
+

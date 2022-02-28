@@ -76,6 +76,12 @@ class GithubRepositoriesConnector(GithubConnector):
 
         logger.info(f"Refresh Repositories: Fetched {count} repositories in total for connector {self.name} in organization {self.organization_key}")
 
+
+    def fetch_repository_forks(self, repo_source_id):
+        logger.info(
+            f'Fetch repository forks called for repositiory {self.name} in organization {self.organization_key}')
+
+
     def register_repository_webhooks(self, repo_source_id, registered_webhooks):
         if self.access_token is not None:
             # Delete existing/registered webhook before registering new
@@ -152,7 +158,7 @@ class GithubRepository(PolarisGithubRepository):
             else datetime.utcnow() - timedelta(days=INITIAL_IMPORT_DAYS)
         self.connector = connector
         self.access_token = connector.access_token
-        self.state_mapping = dict(
+        self.pull_request_state_mapping = dict(
             open=GithubPullRequestState.open.value,
             closed=GithubPullRequestState.closed.value,
             merged=GithubPullRequestState.merged.value
@@ -171,7 +177,7 @@ class GithubRepository(PolarisGithubRepository):
             title=pull_request.title,
             description=pull_request.body,
             source_state=pull_request.state,
-            state=self.state_mapping['merged'] if pull_request.merged_at is not None else self.state_mapping[
+            state=self.pull_request_state_mapping['merged'] if pull_request.merged_at is not None else self.pull_request_state_mapping[
                 pull_request.state],
             source_created_at=pull_request.created_at.strftime("%Y-%m-%d %H:%M:%S"),
             source_last_updated=pull_request.updated_at.strftime(
@@ -188,29 +194,47 @@ class GithubRepository(PolarisGithubRepository):
             web_url=pull_request.html_url
         )
 
-    def fetch_pull_requests_from_source(self, source_id=None):
+    def fetch_pull_requests_from_source(self, pull_request_source_id=None):
         if self.access_token is not None:
             github = self.connector.get_github_client()
             repo = github.get_repo(int(self.repository.source_id))
-            # TODO: There is no 'since' parameter so fetching all PRs. \
-            #  Checking during iteration on pages for last updated PR
 
-            if source_id is None:
-                prs_iterator = repo.get_pulls(
-                    state='all',
-                    sort='updated',
-                    direction='desc'
-                )
-
-                fetched_upto_last_update = False
-                while prs_iterator._couldGrow() and not fetched_upto_last_update:
-                    pull_requests = []
-                    for pr in prs_iterator._fetchNextPage():
-                        if pr.updated_at < self.last_updated:
-                            fetched_upto_last_update = True
-                            break
-                        else:
-                            pull_requests.append(self.map_pull_request_info(pr))
-                    yield pull_requests
+            if pull_request_source_id is None:
+                # fetch all pull requests
+                yield from self.fetch_all_pull_requests(repo)
             else:
-                yield [self.map_pull_request_info(repo.get_pull(int(source_id)))]
+                yield [self.map_pull_request_info(repo.get_pull(int(pull_request_source_id)))]
+
+    def fetch_all_pull_requests(self, repo):
+        prs_iterator = repo.get_pulls(
+            state='all',
+            sort='updated',
+            direction='desc'
+        )
+        fetched_upto_last_update = False
+        while prs_iterator._couldGrow() and not fetched_upto_last_update:
+            pull_requests = []
+            for pr in prs_iterator._fetchNextPage():
+                if pr.updated_at < self.last_updated:
+                    fetched_upto_last_update = True
+                    break
+                else:
+                    pull_requests.append(self.map_pull_request_info(pr))
+            yield pull_requests
+
+    def fetch_repository_forks(self):
+        if self.access_token is not None:
+            github = self.connector.get_github_client()
+            repo = github.get_repo(int(self.repository.source_id))
+            try:
+                forks_paginator = repo.get_forks()
+                while forks_paginator._couldGrow():
+                    repos = [
+                        self.connector.map_repository_info(repo)
+                        for repo in forks_paginator._fetchNextPage()
+                        if not repo.archived
+                    ]
+                    yield repos
+            except GithubException as exc:
+                logger.error(f"Github Exception raised fetching forks for repo {self.name}: {str(exc)}")
+                raise
