@@ -76,12 +76,6 @@ class GithubRepositoriesConnector(GithubConnector):
 
         logger.info(f"Refresh Repositories: Fetched {count} repositories in total for connector {self.name} in organization {self.organization_key}")
 
-
-    def fetch_repository_forks(self, repo_source_id):
-        logger.info(
-            f'Fetch repository forks called for repositiory {self.name} in organization {self.organization_key}')
-
-
     def register_repository_webhooks(self, repo_source_id, registered_webhooks):
         if self.access_token is not None:
             # Delete existing/registered webhook before registering new
