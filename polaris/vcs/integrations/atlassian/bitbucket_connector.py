@@ -52,8 +52,8 @@ class BitBucketConnector(BitBucketBaseConnector):
             if entry['name'] == scheme:
                 return entry['href']
 
-    def fetch_repositories(self):
-        fetch_repos_url = f'/2.0/repositories/{{{self.atlassian_account_key}}}'
+    def fetch_repositories(self, url=None):
+        fetch_repos_url = url or f'/2.0/repositories/{{{self.atlassian_account_key}}}'
         params = None
 
         while fetch_repos_url is not None:
@@ -95,8 +95,8 @@ class BitBucketConnector(BitBucketBaseConnector):
             ),
         )
 
-    def fetch_repositories_from_source(self):
-        for repositories in self.fetch_repositories():
+    def fetch_repositories_from_source(self, url=None):
+        for repositories in self.fetch_repositories(url):
             yield [
                 self.map_repository_info(repo)
                 for repo in repositories
@@ -129,6 +129,7 @@ class BitBucketRepository(PolarisBitBucketRepository):
         self.base_url = f'{connector.base_url}'
         self.atlassian_account_key = connector.atlassian_account_key
         self.connector = connector
+        self.repo_url = f'/2.0/repositories/{{{self.atlassian_account_key}}}/{{{self.source_repo_id.strip("{}")}}}'
 
     def map_pull_request_info(self, pull_request):
         # TODO: Validate if merge_commit is the right attribute to identify merge status \
@@ -221,3 +222,7 @@ class BitBucketRepository(PolarisBitBucketRepository):
                     self.map_pull_request_info(pr)
                     for pr in pull_requests
                 ]
+
+    def fetch_repository_forks(self):
+        fetch_forks_url = f"{self.repo_url}/forks"
+        yield from self.connector.fetch_repositories_from_source(url=fetch_forks_url)
