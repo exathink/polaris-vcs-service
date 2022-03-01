@@ -78,8 +78,10 @@ class BitBucketConnector(BitBucketBaseConnector):
                 )
 
     def map_repository_info(self, repo):
+        forked_from = repo.get('parent')
+
         return dict(
-            name=repo['name'],
+            name=repo['name'] if forked_from is None else f"{repo['full_name'].replace('/', ' <- ')}",
             url=self.get_clone_url(repo['links']['clone'], 'https'),
             public=not repo['is_private'],
             vendor='git',
@@ -91,7 +93,9 @@ class BitBucketConnector(BitBucketBaseConnector):
                 full_name=repo['full_name'],
                 ssh_url=self.get_clone_url(repo['links']['clone'], 'ssh'),
                 homepage=repo['website'],
-                default_branch=repo['mainbranch']['name'] if repo['mainbranch'] else 'master'
+                default_branch=repo['mainbranch']['name'] if repo['mainbranch'] else 'master',
+                fork=forked_from  is not None,
+                fork_source_id=forked_from.get('uuid') if forked_from is not None else None
             ),
         )
 
