@@ -29,8 +29,9 @@ class GitlabRepositoriesConnector(GitlabConnector):
         self.webhook_events = ['push_events', 'merge_requests_events']
 
     def map_repository_info(self, repo):
+        forked_from = repo.get('forked_from_project')
         return dict(
-            name=repo['name'],
+            name=repo['name'] if forked_from is None else f"{repo['path_with_namespace'].replace('/', ' <- ')}",
             url=repo['http_url_to_repo'],
             public=repo['visibility'] == 'public',
             vendor='git',
@@ -42,7 +43,9 @@ class GitlabRepositoriesConnector(GitlabConnector):
                 ssh_url=repo['ssh_url_to_repo'],
                 homepage=repo['web_url'],
                 default_branch=repo['default_branch'],
-                path_with_namespace=repo['path_with_namespace']
+                path_with_namespace=repo['path_with_namespace'],
+                fork=forked_from is not None,
+                fork_source_id=forked_from.get('id') if forked_from is not None else None
             ),
         )
 
@@ -120,8 +123,8 @@ class GitlabRepositoriesConnector(GitlabConnector):
                 f'{response.status_code} {response.text}'
             )
 
-    def fetch_repositories(self):
-        fetch_repos_url = f'{self.base_url}/projects'
+    def fetch_repositories(self, url=None):
+        fetch_repos_url = url or f'{self.base_url}/projects'
         while fetch_repos_url is not None:
             response = requests.get(
                 fetch_repos_url,
@@ -139,8 +142,8 @@ class GitlabRepositoriesConnector(GitlabConnector):
                     f"Server test failed {response.text} status: {response.status_code}\n"
                 )
 
-    def fetch_repositories_from_source(self):
-        for repositories in self.fetch_repositories():
+    def fetch_repositories_from_source(self, url=None):
+        for repositories in self.fetch_repositories(url):
             yield [
                 self.map_repository_info(repo)
                 for repo in repositories
@@ -167,12 +170,13 @@ class GitlabRepository(PolarisGitlabRepository):
         self.webhook_secret = self.gitlab_connector.webhook_secret
         self.base_url = f'{self.gitlab_connector.base_url}'
         self.personal_access_token = self.gitlab_connector.personal_access_token
-        self.state_mapping = dict(
+        self.pull_request_state_mapping = dict(
             opened=GitlabPullRequestState.opened.value,
             closed=GitlabPullRequestState.closed.value,
             merged=GitlabPullRequestState.merged.value,
             locked=GitlabPullRequestState.locked.value
         )
+        self.repo_url=f"{self.base_url}/projects/{self.source_repo_id}"
 
     def map_pull_request_info(self, pull_request):
         if pull_request.get('merged_at') is not None:
@@ -187,7 +191,7 @@ class GitlabRepository(PolarisGitlabRepository):
             title=pull_request.get('title'),
             description=pull_request.get('description'),
             source_state=pull_request.get('state'),
-            state=self.state_mapping[pull_request.get('state')],
+            state=self.pull_request_state_mapping[pull_request.get('state')],
             source_created_at=pull_request.get('created_at'),
             source_last_updated=pull_request.get('updated_at'),
             source_merge_status=pull_request.get('merge_status'),
@@ -251,3 +255,7 @@ class GitlabRepository(PolarisGitlabRepository):
             yield [
                 self.map_pull_request_info(self.get_pull_request(source_id))
             ]
+
+    def fetch_repository_forks(self):
+        fetch_forks_url = f"{self.repo_url}/forks"
+        yield from self.gitlab_connector.fetch_repositories_from_source(url=fetch_forks_url)
