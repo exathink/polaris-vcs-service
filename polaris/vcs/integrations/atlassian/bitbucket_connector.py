@@ -88,7 +88,7 @@ class BitBucketConnector(BitBucketBaseConnector):
             integration_type=VcsIntegrationTypes.bitbucket.value,
             description=repo['description'],
             source_id=repo['uuid'],
-            polling=False,
+            polling=True,
             properties=dict(
                 full_name=repo['full_name'],
                 ssh_url=self.get_clone_url(repo['links']['clone'], 'ssh'),

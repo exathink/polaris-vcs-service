@@ -76,7 +76,6 @@ class TestRegisterRepositoriesConnectorWebhooks:
                 assert db.connection().execute(
                     f"select count(*) from repos.repositories \
                     where key='{fixture.repository_key}' \
-                    and polling=false \
                     and source_data->>'active_webhook'='{fixture.active_hook_id}'" \
                     ).scalar() == 1
 
@@ -110,7 +109,6 @@ class TestRegisterRepositoriesConnectorWebhooks:
                 assert db.connection().execute(
                     f"select count(*) from repos.repositories \
                                 where key='{fixture.repository_key}' \
-                                and polling=false \
                                 and source_data->>'active_webhook'='{fixture.active_hook_id}'" \
                     ).scalar() == 1
 
@@ -139,7 +137,6 @@ class TestRegisterRepositoriesConnectorWebhooks:
                 assert db.connection().execute(
                     f"select count(*) from repos.repositories \
                                 where key='{fixture.repository_key}' \
-                                and polling=false \
                                 and source_data->>'active_webhook'='{new_webhook_id}' \
                                 and source_data->>'inactive_webhooks'='[]'" \
                     ).scalar() == 1
@@ -255,6 +252,5 @@ class TestRegisterRepositoriesConnectorWebhooks:
                 assert db.connection().execute(
                     f"select count(*) from repos.repositories \
                                     where key='{fixture.repository_key}' \
-                                    and polling=false \
                                     and source_data->>'active_webhook'='{fixture.active_hook_id}'" \
                     ).scalar() == 1
