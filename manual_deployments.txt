@@ -1,0 +1,7 @@
+# Using this file to track manual deployments.
+# If we make system config changes to fix bugs etc, but dont change any actual code, we
+# record them here and check into git and trigger a normal build process via the pipeline instead
+# of doing an ad hoc deployment. Explain the reason here.
+
+3/9/2022: Fix PP-107. Bitbucket connector install was failing, we needed to add the ATLASSIAN_CONNECT_SKIP_SIGNED_INSTALL_VERIFICATION setting
+to the task definition environment. Updated the standard setting in polaris-all and manually updated the setting on ECS.
