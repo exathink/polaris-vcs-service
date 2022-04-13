@@ -9,6 +9,8 @@
 # Author: Krishna Kumar
 
 import logging
+import requests
+
 from datetime import datetime, timedelta
 
 from polaris.utils.config import get_config_provider
@@ -19,61 +21,69 @@ from polaris.common.enums import VcsIntegrationTypes
 config_provider = get_config_provider()
 logger = logging.getLogger('polaris.vcs.integrations.azure')
 
+
 class AzureRepositoriesConnector(AzureConnector):
 
     def __init__(self, connector):
         super().__init__(connector)
 
-
     def map_repository_info(self, repo):
-
         return dict(
-            name=repo.name if not repo.fork else repo.full_name.replace('/', ' <- ') if repo.full_name else repo.name,
-            url=repo.html_url,
-            public=not repo.private,
+            name=repo.get('name') if not repo.get('isFork') else f"<- {repo.name}",
+            url=repo.get('remoteUrl'),
+            public=False,
             vendor='git',
-            integration_type=VcsIntegrationTypes.github.value,
-            description=repo.description,
-            source_id=repo.id,
+            integration_type=VcsIntegrationTypes.azure.value,
+            source_id=repo.get('id'),
             polling=True,
             properties=dict(
-                ssh_url=repo.ssh_url,
-                homepage=repo.homepage,
-                default_branch=repo.default_branch,
-                name=repo.name,
-                full_name=repo.full_name,
-                fork=repo.fork,
+                ssh_url=repo.get('sshUrl'),
+                default_branch=repo.get('defaultBranch', "").replace("refs/heads/", ""),
+                name=repo.get('name'),
+                fork=repo.get('isFork', False),
+                project=repo.get('project')
             ),
         )
 
-    def fetch_repositories(self):
-        if self.access_token is not None:
-            github = self.get_github_client()
-            if self.github_organization is not None:
-                organization = github.get_organization(self.github_organization)
-                if organization is not None:
-                    return organization.get_repos()
-                else:
-                    raise ProcessingException(f"The github organization {self.github_organization} could not be found")
+    def fetch_repositories(self, continuation_token=None):
+        if self.personal_access_token is not None:
+            page = f"&continuationToken={continuation_token}" if continuation_token else ""
+            response = requests.get(
+                self.build_url(f'git/repositories?includeAllUrls=True&$top=1{page}'),
+                headers=self.get_standard_headers()
+            )
+            if response.status_code == 200:
+                body = response.json()
+                return dict(
+                    count=body.get('count'),
+                    repos=body.get('value'),
+                    continuation_token=response.headers.get('x-ms-continuation-token')
+                )
             else:
-                return github.get_user().get_repos()
+                raise ProcessingException("Exception on fetching repos")
         else:
-            raise ProcessingException("No access token found this Github Connector. Cannot continue.")
+            raise ProcessingException("No access token found for this Azure Connector. Cannot continue.")
 
     def fetch_repositories_from_source(self):
-        logger.info(f'Refresh Repositories: Fetching repositories for connector {self.name} in organization {self.organization_key}')
-        repos_paginator = self.fetch_repositories()
+        logger.info(
+            f'Refresh Repositories: Fetching repositories for connector {self.name} in organization {self.organization_key}')
+        response = self.fetch_repositories()
         count = 0
-        while repos_paginator._couldGrow():
+        while True:
             repos = [
                 self.map_repository_info(repo)
-                for repo in repos_paginator._fetchNextPage()
-                if not repo.archived
+                for repo in response.get('repos')
             ]
-            count = count + len(repos)
+            count = count + response.get('count')
+
             yield repos
 
-        logger.info(f"Refresh Repositories: Fetched {count} repositories in total for connector {self.name} in organization {self.organization_key}")
+            if response.get('continuation_token') is not None:
+                response = self.fetch_repositories(response.get('continuation_token'))
+            else:
+                break
+        logger.info(
+            f"Refresh Repositories: Fetched {count} repositories in total for connector {self.name} in organization {self.organization_key}")
 
     def register_repository_webhooks(self, repo_source_id, registered_webhooks):
         if self.access_token is not None:
@@ -105,8 +115,10 @@ class AzureRepositoriesConnector(AzureConnector):
                 )
                 active_hook_id = new_webhook.id
             except GithubException as e:
-                logger.error(f"Failed to register webhooks for github repository with source_id: {repo_source_id}: {e.data.get('message')} error: {e.data.get('error')}")
-                raise ProcessingException(f"Webhook registration failed due to: {e.data.get('message')} error: {e.data.get('errors')}")
+                logger.error(
+                    f"Failed to register webhooks for github repository with source_id: {repo_source_id}: {e.data.get('message')} error: {e.data.get('error')}")
+                raise ProcessingException(
+                    f"Webhook registration failed due to: {e.data.get('message')} error: {e.data.get('errors')}")
             return dict(
                 success=True,
                 active_webhook=active_hook_id,
@@ -152,7 +164,6 @@ class AzureRepository(PolarisAzureRepository):
         self.connector = connector
         self.access_token = connector.access_token
 
-
     def map_pull_request_info(self, pull_request):
         if pull_request.merged_at is not None:
             pr_end_date = pull_request.merged_at.strftime("%Y-%m-%d %H:%M:%S")
@@ -166,7 +177,8 @@ class AzureRepository(PolarisAzureRepository):
             title=pull_request.title,
             description=pull_request.body,
             source_state=pull_request.state,
-            state=self.pull_request_state_mapping['merged'] if pull_request.merged_at is not None else self.pull_request_state_mapping[
+            state=self.pull_request_state_mapping['merged'] if pull_request.merged_at is not None else
+            self.pull_request_state_mapping[
                 pull_request.state],
             source_created_at=pull_request.created_at.strftime("%Y-%m-%d %H:%M:%S"),
             source_last_updated=pull_request.updated_at.strftime(

@@ -14,7 +14,7 @@ from polaris.utils.exceptions import ProcessingException
 from polaris.vcs.integrations.github import GithubRepositoriesConnector
 from polaris.vcs.integrations.atlassian import BitBucketConnector
 from polaris.vcs.integrations.gitlab import GitlabRepositoriesConnector
-
+from polaris.vcs.integrations.azure import AzureRepositoriesConnector
 
 def get_connector(connector_name=None, connector_key=None, join_this=None):
     with db.orm_session(join_this) as session:
@@ -30,6 +30,8 @@ def get_connector(connector_name=None, connector_key=None, join_this=None):
                     return BitBucketConnector(connector)
                 elif connector.type == ConnectorType.gitlab.value:
                     return GitlabRepositoriesConnector(connector)
+                elif connector.type == ConnectorType.azure.value:
+                    return AzureRepositoriesConnector(connector)
                 else:
                     raise ProcessingException(f'No Repositories connector registered for connector type: {connector.type} '
                                               f'Connector Key was {connector_key}')
