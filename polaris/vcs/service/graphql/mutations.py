@@ -130,7 +130,7 @@ class CreateVcsConnector(CreateConnector):
     connector = VcsConnector.Field(key_is_required=False)
 
     def mutate(self, info, create_connector_input):
-        logger.info('Create WorkTracking Connector called')
+        logger.info('Create VCS Connector called')
         with db.orm_session() as session:
             connector = create_connector(create_connector_input.connector_type, create_connector_input,
                                          join_this=session)
