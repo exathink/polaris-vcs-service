@@ -49,7 +49,8 @@ setup(
         'polaris.vcs.integrations',
         'polaris.vcs.integrations.atlassian',
         'polaris.vcs.integrations.gitlab',
-        'polaris.vcs.integrations.github'
+        'polaris.vcs.integrations.github',
+        'polaris.vcs.integrations.azure'
 
     ],
     url='',
