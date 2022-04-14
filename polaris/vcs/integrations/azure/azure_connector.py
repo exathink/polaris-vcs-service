@@ -30,13 +30,14 @@ class AzureRepositoriesConnector(AzureConnector):
     def map_repository_info(self, repo):
         return dict(
             name=repo.get('name') if not repo.get('isFork') else f"<- {repo.name}",
-            url=repo.get('remoteUrl'),
+            url=repo.get('webUrl'),
             public=False,
             vendor='git',
             integration_type=VcsIntegrationTypes.azure.value,
             source_id=repo.get('id'),
             polling=True,
             properties=dict(
+                remote_url=repo.get('remoteUrl'),
                 ssh_url=repo.get('sshUrl'),
                 default_branch=repo.get('defaultBranch', "").replace("refs/heads/", ""),
                 name=repo.get('name'),
