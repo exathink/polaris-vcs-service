@@ -87,57 +87,15 @@ class AzureRepositoriesConnector(AzureConnector):
             f"Refresh Repositories: Fetched {count} repositories in total for connector {self.name} in organization {self.organization_key}")
 
     def register_repository_webhooks(self, repo_source_id, registered_webhooks):
-        if self.access_token is not None:
-            # Delete existing/registered webhook before registering new
-            deleted_hook_ids = []
-            for inactive_hook_id in registered_webhooks:
-                if self.delete_repository_webhook(repo_source_id, inactive_hook_id):
-                    logger.info(f"Deleted webhook with id {inactive_hook_id} for source repo {repo_source_id}")
-                    deleted_hook_ids.append(inactive_hook_id)
-                else:
-                    logger.info(f"Webhook with id {inactive_hook_id} for repo {repo_source_id} could not be deleted")
-
-            # register new hook
-            github = self.get_github_client()
-            repo = github.get_repo(int(repo_source_id))
-
-            repository_webhooks_callback_url = f"{config_provider.get('GITHUB_WEBHOOKS_BASE_URL')}/repository/webhooks/{self.key}/"
-
-            try:
-                new_webhook = repo.create_hook(
-                    name='web',
-                    config=dict(
-                        url=repository_webhooks_callback_url,
-                        content_type="json",
-                        insecure_ssl="0"
-                    ),
-                    events=self.webhook_events,
-                    active=True,
-                )
-                active_hook_id = new_webhook.id
-            except GithubException as e:
-                logger.error(
-                    f"Failed to register webhooks for github repository with source_id: {repo_source_id}: {e.data.get('message')} error: {e.data.get('error')}")
-                raise ProcessingException(
-                    f"Webhook registration failed due to: {e.data.get('message')} error: {e.data.get('errors')}")
-            return dict(
-                success=True,
-                active_webhook=active_hook_id,
-                deleted_webhooks=deleted_hook_ids,
-                registered_events=self.webhook_events,
-            )
-        else:
-            raise ProcessingException(f"Github Access Token is None")
+        return dict(
+            success=False,
+            active_webhook=None,
+            deleted_webhooks=[],
+            registered_events=[],
+        )
 
     def delete_repository_webhook(self, repo_source_id, inactive_hook_id):
-        github = self.get_github_client()
-        repo = github.get_repo(int(repo_source_id))
-        try:
-            hook = repo.get_hook(inactive_hook_id)
-            hook.delete()
-            return True
-        except:
-            logging.info(f"Could not delete webhook {inactive_hook_id} for repo {repo_source_id}")
+        return True
 
 
 class PolarisAzureRepository:
@@ -197,15 +155,7 @@ class AzureRepository(PolarisAzureRepository):
         )
 
     def fetch_pull_requests_from_source(self, pull_request_source_id=None):
-        if self.access_token is not None:
-            github = self.connector.get_github_client()
-            repo = github.get_repo(int(self.repository.source_id))
-
-            if pull_request_source_id is None:
-                # fetch all pull requests
-                yield from self.fetch_all_pull_requests(repo)
-            else:
-                yield [self.map_pull_request_info(repo.get_pull(int(pull_request_source_id)))]
+        yield []
 
     def fetch_all_pull_requests(self, repo):
         prs_iterator = repo.get_pulls(

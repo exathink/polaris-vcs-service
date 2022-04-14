@@ -141,7 +141,7 @@ def import_repositories(organization_key, connector_key, repository_keys):
             imported_repositories = result['repositories']
             for repo in imported_repositories:
                 register_webhooks_result = register_repository_webhooks(connector_key, repo['key'], join_this=session)
-                if not register_webhooks_result['success']:
+                if register_webhooks_result is not None and not register_webhooks_result['success']:
                     # we dont raise an error when register_web_hook repositories fails.
                     # worst case we should fall back on polling for these, and
                     # we can always go back try re-registering webhooks for them using the mutation. 
