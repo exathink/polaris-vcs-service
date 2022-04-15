@@ -50,7 +50,7 @@ class AzureRepositoriesConnector(AzureConnector):
         if self.personal_access_token is not None:
             page = f"&continuationToken={continuation_token}" if continuation_token else ""
             response = requests.get(
-                self.build_url(f'git/repositories?includeAllUrls=True&$top=1{page}'),
+                self.build_org_url(f'git/repositories?includeAllUrls=True&$top=50{page}'),
                 headers=self.get_standard_headers()
             )
             if response.status_code == 200:
@@ -121,72 +121,85 @@ class AzureRepository(PolarisAzureRepository):
             if repository.latest_pull_request_update_timestamp is not None \
             else datetime.utcnow() - timedelta(days=INITIAL_IMPORT_DAYS)
         self.connector = connector
-        self.access_token = connector.access_token
+        self.pull_request_state_map = dict(
+            active='open',
+            completed='closed',
+            abandoned='closed',
+            notSet='open'
+        )
+
 
     def map_pull_request_info(self, pull_request):
-        if pull_request.merged_at is not None:
-            pr_end_date = pull_request.merged_at.strftime("%Y-%m-%d %H:%M:%S")
-        elif pull_request.closed_at is not None:
-            pr_end_date = pull_request.closed_at.strftime("%Y-%m-%d %H:%M:%S")
-        else:
-            pr_end_date = None
+        target_repository_id = pull_request['repository']['id'] if 'repository' in pull_request else None
+        source_repository_id = pull_request['forkSource']['repository']['id'] if 'forkSource' in pull_request else target_repository_id
+        closed_date = pull_request.get('closedDate')
         return dict(
-            source_id=pull_request.id,
-            source_display_id=pull_request.number,
-            title=pull_request.title,
-            description=pull_request.body,
-            source_state=pull_request.state,
-            state=self.pull_request_state_mapping['merged'] if pull_request.merged_at is not None else
-            self.pull_request_state_mapping[
-                pull_request.state],
-            source_created_at=pull_request.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-            source_last_updated=pull_request.updated_at.strftime(
-                "%Y-%m-%d %H:%M:%S") if pull_request.updated_at else None,
-            # TODO: Figure out how to determine merge status.
-            source_merge_status=None,
-            source_merged_at=pull_request.merged_at.strftime("%Y-%m-%d %H:%M:%S") if pull_request.merged_at else None,
-            source_closed_at=pull_request.closed_at.strftime("%Y-%m-%d %H:%M:%S") if pull_request.closed_at else None,
-            end_date=pr_end_date,
-            source_branch=pull_request.head.ref,
-            target_branch=pull_request.base.ref,
-            source_repository_source_id=pull_request.head.repo.id,
-            target_repository_source_id=pull_request.base.repo.id,
-            web_url=pull_request.html_url
+            # AZD does not have globally unique id for PRs - always need
+            # to qualify by repository id for uniqueness
+            source_id=pull_request['pullRequestId'],
+            source_display_id=pull_request['pullRequestId'],
+            title=pull_request['title'],
+            description=pull_request['description'],
+            source_state=pull_request['status'],
+            state=self.pull_request_state_map.get(pull_request['status'], None),
+            source_created_at=pull_request['creationDate'],
+            # AZD does not provide a last updated  date. This sucks, but
+            # we will use the last update from our side as the updated date for non closed
+            # items and the closedDate for the closed items. Likely this will cause us
+            # some issues down the line, but it is the closest approx I can think of
+            # for a valid last updated date in the absence of a reliable one from them.
+            source_last_updated=datetime.utcnow() if closed_date is None else closed_date,
+            source_merge_status=pull_request['mergeStatus'],
+            source_merged_at=closed_date,
+            source_closed_at=closed_date,
+            end_date=closed_date,
+            source_branch=pull_request.get('sourceRefName', "").replace('refs/heads/', ''),
+            target_branch=pull_request.get('targetRefName', "").replace('refs/heads/', ''),
+            source_repository_source_id=source_repository_id,
+            target_repository_source_id=target_repository_id,
+            web_url=f"{self.repository.url}/pullrequest/{pull_request['pullRequestId']}"
         )
+
+
+    def fetch_pull_requests(self, limit=50, continuation_token=None):
+        page = f"&continuationToken={continuation_token}" if continuation_token else ""
+        response = requests.get(
+            self.connector.build_org_url(
+                f'/git/repositories/{self.source_repo_id}/pullrequests?searchCriteria.status=all&searchCriteria.includeLinks=true&top={limit}{page}'
+            ),
+            headers=self.connector.get_standard_headers()
+        )
+        if response.status_code == 200:
+            body = response.json()
+            if body is not None:
+                return dict(
+                    count=body.get('count'),
+                    pull_requests=body.get('value'),
+                    continuation_token=response.headers.get('x-ms-continuation-token')
+                )
 
     def fetch_pull_requests_from_source(self, pull_request_source_id=None):
-        yield []
+        logger.info(
+            f'Fetching Pull Requests:  repository {self.repository.name} in organization {self.repository.organization_key}')
 
-    def fetch_all_pull_requests(self, repo):
-        prs_iterator = repo.get_pulls(
-            state='all',
-            sort='updated',
-            direction='desc'
-        )
-        fetched_upto_last_update = False
-        while prs_iterator._couldGrow() and not fetched_upto_last_update:
-            pull_requests = []
-            for pr in prs_iterator._fetchNextPage():
-                if pr.updated_at < self.last_updated:
-                    fetched_upto_last_update = True
-                    break
-                else:
-                    pull_requests.append(self.map_pull_request_info(pr))
+        response = self.fetch_pull_requests()
+        count = 0
+        while True:
+            pull_requests = [
+                self.map_pull_request_info(pull_request)
+                for pull_request in response.get('pull_requests')
+            ]
+            count = count + response.get('count')
+
             yield pull_requests
 
+            if response.get('continuation_token') is not None:
+                response = self.fetch_pull_requests(response.get('continuation_token'))
+            else:
+                break
+
+        logger.info(
+            f"Fetched {count} pull_requests in total for repository {self.repository.name} in organization {self.repository.organization_key}")
+
     def fetch_repository_forks(self):
-        if self.access_token is not None:
-            github = self.connector.get_github_client()
-            repo = github.get_repo(int(self.repository.source_id))
-            try:
-                forks_paginator = repo.get_forks()
-                while forks_paginator._couldGrow():
-                    repos = [
-                        self.connector.map_repository_info(repo)
-                        for repo in forks_paginator._fetchNextPage()
-                        if not repo.archived
-                    ]
-                    yield repos
-            except GithubException as exc:
-                logger.error(f"Github Exception raised fetching forks for repo {self.name}: {str(exc)}")
-                raise
+        raise NotImplementedError('This operation is not yet implemented for the Azure Connector')
