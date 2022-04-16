@@ -50,7 +50,7 @@ class AzureRepositoriesConnector(AzureConnector):
         if self.personal_access_token is not None:
             page = f"&continuationToken={continuation_token}" if continuation_token else ""
             response = requests.get(
-                self.build_org_url(f'git/repositories?includeAllUrls=True&$top=50{page}'),
+                self.build_org_url(f'git/repositories?includeAllUrls=True{page}'),
                 headers=self.get_standard_headers()
             )
             if response.status_code == 200:
@@ -78,7 +78,22 @@ class AzureRepositoriesConnector(AzureConnector):
             count = count + response.get('count')
 
             yield repos
+            # Note: The pagination mechanism here is untested since there
+            # is no documentation for how this api is supposed to paginate its
+            # result. The best that can be gleaned from reading the interwebs is that
+            # *some* apis have hardcoded page limits and if they start to paginate then
+            # they return the continuation token in the response header, and reading between the lines this seems
+            # to be one of them.
 
+            # This api does not seem
+            # to respect the $top parameter, so we have no way of forcing pagination to test this.
+            # At some point I guess we will run into a customer who has a large enough set of repositories
+            # that will trigger this and this code will either work and give us all the repos or fail and not
+            # report all the available repos. We'll find out then I guess *shrug*.
+
+            # Azure DevOps takes over from Atlassian for having the shittiest api designs at this point.
+            # We are using completely different techniques to paginate repositories and pull requests
+            # and this is just unbelievably amateurish.
             if response.get('continuation_token') is not None:
                 response = self.fetch_repositories(response.get('continuation_token'))
             else:
