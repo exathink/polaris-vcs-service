@@ -128,10 +128,10 @@ class AzureRepository(PolarisAzureRepository):
             notSet='open'
         )
 
-
     def map_pull_request_info(self, pull_request):
         target_repository_id = pull_request['repository']['id'] if 'repository' in pull_request else None
-        source_repository_id = pull_request['forkSource']['repository']['id'] if 'forkSource' in pull_request else target_repository_id
+        source_repository_id = pull_request['forkSource']['repository'][
+            'id'] if 'forkSource' in pull_request else target_repository_id
         closed_date = pull_request.get('closedDate')
         return dict(
             # AZD does not have globally unique id for PRs - always need
@@ -160,15 +160,20 @@ class AzureRepository(PolarisAzureRepository):
             web_url=f"{self.repository.url}/pullrequest/{pull_request['pullRequestId']}"
         )
 
-
-    def fetch_pull_requests(self, limit=50, continuation_token=None):
-        page = f"&continuationToken={continuation_token}" if continuation_token else ""
+    def fetch_pull_requests(self, top=10, skip=0):
         response = requests.get(
             self.connector.build_org_url(
-                f'/git/repositories/{self.source_repo_id}/pullrequests?searchCriteria.status=all&searchCriteria.includeLinks=true&top={limit}{page}'
+                f'/git/repositories/{self.source_repo_id}/pullrequests'
             ),
-            headers=self.connector.get_standard_headers()
+            headers=self.connector.get_standard_headers(),
+            params={
+                "searchCriteria.status": "all",
+                "searchCriteria.includeLinks": "true",
+                "$top": top,
+                "$skip": skip
+            }
         )
+
         if response.status_code == 200:
             body = response.json()
             if body is not None:
@@ -193,8 +198,8 @@ class AzureRepository(PolarisAzureRepository):
 
             yield pull_requests
 
-            if response.get('continuation_token') is not None:
-                response = self.fetch_pull_requests(response.get('continuation_token'))
+            if len(pull_requests) > 0:
+                response = self.fetch_pull_requests(skip=count)
             else:
                 break
 
