@@ -80,7 +80,8 @@ class AzureRepositoriesConnector(AzureConnector):
             yield repos
             # Note: The pagination mechanism here is untested since there
             # is no documentation for how this api is supposed to paginate its
-            # result. The best that can be gleaned from reading the interwebs is that
+            # result. The best that can be gleaned from reading the interwebs
+            # (https://stackoverflow.com/questions/69345683/azure-devops-rest-api-top-parameter-in-powershell-script-is-not-working/69346262#69346262) is that
             # *some* apis have hardcoded page limits and if they start to paginate then
             # they return the continuation token in the response header, and reading between the lines this seems
             # to be one of them.
