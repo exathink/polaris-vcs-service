@@ -204,6 +204,11 @@ class AzureRepository(PolarisAzureRepository):
                     pull_requests=body.get('value'),
                     continuation_token=response.headers.get('x-ms-continuation-token')
                 )
+        else:
+            raise ProcessingException(
+                f'Fetching Pull Requests for status {status} from source api failed: '
+                f' repository {self.repository.name} in organization {self.repository.organization_key}'
+                f' Response Code: {response.status_code} Response Text: {response.text}')
 
     def fetch_completed_pull_requests(self, days=30):
         logger.info(
@@ -257,12 +262,39 @@ class AzureRepository(PolarisAzureRepository):
         logger.info(
             f"{count} active pull_requests fetched for repository {self.repository.name} in organization {self.repository.organization_key}")
 
+    def fetch_pull_request(self, pull_request_source_id):
+        logger.info(
+            f'Fetching Pull Request {pull_request_source_id}:  repository {self.repository.name} in organization {self.repository.organization_key}')
+        response = requests.get(
+            self.connector.build_org_url(
+                f'/git/repositories/{self.source_repo_id}/pullrequests/{pull_request_source_id}'
+            ),
+            headers=self.connector.get_standard_headers(),
+        )
+        if response.status_code == 200:
+            logger.info(
+                f'Fetched Pull Request {pull_request_source_id}:  repository {self.repository.name} in organization {self.repository.organization_key}'
+            )
+            pull_request = response.json()
+            yield [
+                self.map_pull_request_info(pull_request)
+            ]
+        else:
+            raise ProcessingException(
+                f'Fetching Pull Request {pull_request_source_id}  from source api failed: '
+                f' repository {self.repository.name} in organization {self.repository.organization_key}'
+                f' Response Code: {response.status_code} Response Text: {response.text}'
+            )
+
+
     def fetch_pull_requests_from_source(self, pull_request_source_id=None):
         search_window = self.repository.properties.get('pull_requests_search_window', 30)
         if pull_request_source_id is None:
             # first fetch all the completed pull requests
             yield from self.fetch_completed_pull_requests(days=search_window)
             yield from self.fetch_active_pull_requests()
+        else:
+            yield from self.fetch_pull_request(pull_request_source_id)
 
     def fetch_repository_forks(self):
         raise NotImplementedError('This operation is not yet implemented for the Azure Connector')

@@ -155,7 +155,7 @@ class VcsTopicSubscriber(TopicSubscriber):
                     self.publish_sync_pull_request_responses(message, result['pull_requests'], created_messages,
                                                              updated_messages)
                 else:
-                    raise_message_processing_error(message, 'Failed to process sync pull requests', result.get('message'))
+                    raise_message_processing_error(message, 'Failed to process sync pull requests', result.get('exception'))
 
             return created_messages, updated_messages
 
