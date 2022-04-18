@@ -144,6 +144,12 @@ class AzureRepository(PolarisAzureRepository):
             notSet='open'
         )
 
+    @staticmethod
+    def parse_azure_date(date_string):
+        # need this because azure sends us dates with 7 digits in the microseconds
+        # whereas strptime only expects 6 digit microseconds.
+        return datetime.strptime(date_string[:-2], "%Y-%m-%dT%H:%M:%S.%f")
+
     def map_pull_request_info(self, pull_request):
         target_repository_id = pull_request['repository']['id'] if 'repository' in pull_request else None
         source_repository_id = pull_request['forkSource']['repository'][
@@ -176,14 +182,14 @@ class AzureRepository(PolarisAzureRepository):
             web_url=f"{self.repository.url}/pullrequest/{pull_request['pullRequestId']}"
         )
 
-    def fetch_pull_requests(self, top=10, skip=0):
+    def fetch_pull_requests(self, status, top=50, skip=0, ):
         response = requests.get(
             self.connector.build_org_url(
                 f'/git/repositories/{self.source_repo_id}/pullrequests'
             ),
             headers=self.connector.get_standard_headers(),
             params={
-                "searchCriteria.status": "all",
+                "searchCriteria.status": status,
                 "searchCriteria.includeLinks": "true",
                 "$top": top,
                 "$skip": skip
@@ -199,28 +205,40 @@ class AzureRepository(PolarisAzureRepository):
                     continuation_token=response.headers.get('x-ms-continuation-token')
                 )
 
-    def fetch_pull_requests_from_source(self, pull_request_source_id=None):
+    def fetch_completed_pull_requests(self, days=30):
         logger.info(
-            f'Fetching Pull Requests:  repository {self.repository.name} in organization {self.repository.organization_key}')
+            f'Fetching Completed Pull Requests:  repository {self.repository.name} in organization {self.repository.organization_key}')
 
-        response = self.fetch_pull_requests()
+        response = self.fetch_pull_requests(status='completed')
         count = 0
+        search_window = datetime.utcnow() - timedelta(days=days)
         while True:
             pull_requests = [
                 self.map_pull_request_info(pull_request)
                 for pull_request in response.get('pull_requests')
+                if self.parse_azure_date(pull_request.get('closedDate')) >= search_window
+                # here we are relying on the undocumented behavior of the AZD pull requests API which
+                # returns the completed pull requests in descending order of completion dates.
+                # Caveat emptor as with a lot of the AZD APIs. We have no other way of limiting the
+                # returned results so have to go with this for now.
             ]
-            count = count + response.get('count')
+            count = count + len(pull_requests)
 
             yield pull_requests
 
-            if len(pull_requests) > 0:
-                response = self.fetch_pull_requests(skip=count)
+            if 0 < response.get('count') == len(pull_requests):
+                response = self.fetch_pull_requests(skip=count, status='completed')
             else:
                 break
 
         logger.info(
-            f"Fetched {count} pull_requests in total for repository {self.repository.name} in organization {self.repository.organization_key}")
+            f"{count} completed pull_requests fetched for repository {self.repository.name} in organization {self.repository.organization_key}")
+
+    def fetch_pull_requests_from_source(self, pull_request_source_id=None):
+        search_window = self.repository.properties.get('pull_requests_search_window', 30)
+        if pull_request_source_id is None:
+            # first fetch all the completed pull requests
+            yield from self.fetch_completed_pull_requests(days=search_window)
 
     def fetch_repository_forks(self):
         raise NotImplementedError('This operation is not yet implemented for the Azure Connector')
