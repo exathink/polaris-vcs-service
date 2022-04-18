@@ -234,11 +234,35 @@ class AzureRepository(PolarisAzureRepository):
         logger.info(
             f"{count} completed pull_requests fetched for repository {self.repository.name} in organization {self.repository.organization_key}")
 
+    def fetch_active_pull_requests(self):
+        logger.info(
+            f'Fetching Active Pull Requests:  repository {self.repository.name} in organization {self.repository.organization_key}')
+
+        response = self.fetch_pull_requests(status='active')
+        count = 0
+        while True:
+            pull_requests = [
+                self.map_pull_request_info(pull_request)
+                for pull_request in response.get('pull_requests')
+            ]
+            count = count + len(pull_requests)
+
+            yield pull_requests
+
+            if len(pull_requests) > 0:
+                response = self.fetch_pull_requests(skip=count, status='active')
+            else:
+                break
+
+        logger.info(
+            f"{count} active pull_requests fetched for repository {self.repository.name} in organization {self.repository.organization_key}")
+
     def fetch_pull_requests_from_source(self, pull_request_source_id=None):
         search_window = self.repository.properties.get('pull_requests_search_window', 30)
         if pull_request_source_id is None:
             # first fetch all the completed pull requests
             yield from self.fetch_completed_pull_requests(days=search_window)
+            yield from self.fetch_active_pull_requests()
 
     def fetch_repository_forks(self):
         raise NotImplementedError('This operation is not yet implemented for the Azure Connector')
