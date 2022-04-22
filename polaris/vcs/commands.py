@@ -84,19 +84,7 @@ def sync_pull_requests(repository_key, pull_request_key=None):
         return []
 
 
-def register_connector_webhooks(connector_key, join_this=None):
-    with db.orm_session(join_this) as session:
-        connector = connector_factory.get_connector(connector_key=connector_key, join_this=session)
-        if connector and hasattr(connector, 'register_webhooks'):
-            webhook_info = connector.register_webhooks()
-            if webhook_info is not None:
-                connector.update_webhooks(session, webhook_info)
-                return dict(
-                    success=True,
-                    webhook_info=webhook_info
-                )
-        else:
-            log.info("Connector does not support webhook registration.")
+
 
 
 def register_repository_webhooks(connector_key, repository_key, join_this=None):
