@@ -11,7 +11,7 @@
 import logging
 
 from polaris.messaging.topics import TopicSubscriber, ConnectorsTopic, VcsTopic
-from polaris.messaging.messages import RepositoryUpdated, RepositoryCreated, ConnectorCreated
+from polaris.messaging.messages import RepositoryUpdated, RepositoryCreated
 from polaris.vcs.messaging.messages import RefreshConnectorRepositories
 from polaris.messaging.utils import raise_message_processing_error
 from polaris.utils.exceptions import ProcessingException
@@ -27,30 +27,20 @@ class ConnectorsTopicSubscriber(TopicSubscriber):
             topic=ConnectorsTopic(channel, create=True),
             subscriber_queue='connectors_vcs',
             message_classes=[
-                RefreshConnectorRepositories,
-                ConnectorCreated
+                RefreshConnectorRepositories
             ],
             publisher=publisher,
             exclusive=False
         )
 
     def dispatch(self, channel, message):
-        if ConnectorCreated.message_type == message.message_type:
-            connector_key = message.get('connector_key')
-            connector_type = message.get('connector_type')
-            organization_key = message.get('organization_key')
-
-            logger.info(f'{connector_type} connector created:  key {connector_key} organization: {organization_key}')
-            result = commands.register_connector_webhooks(connector_key)
-
-        elif RefreshConnectorRepositories.message_type == message.message_type:
+        if RefreshConnectorRepositories.message_type == message.message_type:
             created_messages = []
             updated_messages = []
             for created, updated in self.process_refresh_connector_repositories(message):
                 self.publish_responses(created, created_messages, updated, updated_messages)
 
             return created_messages, updated_messages
-
 
     @staticmethod
     def process_refresh_connector_repositories(message):
