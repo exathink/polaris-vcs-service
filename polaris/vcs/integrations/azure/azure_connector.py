@@ -26,6 +26,11 @@ class AzureRepositoriesConnector(AzureConnector):
 
     def __init__(self, connector):
         super().__init__(connector)
+        self.webhook_events = [
+                'git.push',
+                'git.pullrequest.created',
+                'git.pullrequest.merged'
+            ]
 
     def map_repository_info(self, repo):
         return dict(
@@ -103,14 +108,45 @@ class AzureRepositoriesConnector(AzureConnector):
             f"Refresh Repositories: Fetched {count} repositories in total for connector {self.name} in organization {self.organization_key}")
 
     def register_repository_webhooks(self, repo_source_id, registered_webhooks):
+        azure_webhooks_endpoint = f'{config_provider.get("AZURE_WEBHOOKS_BASE_URL")}/repository/webhooks'
+        active_webhooks = [
+            self.register_azure_repository_subscription(azure_webhooks_endpoint, event_type, repo_source_id)
+            for event_type in self.webhook_events
+        ]
         return dict(
-            success=False,
-            active_webhook=None,
+            success=True,
+            active_webhook=active_webhooks,
             deleted_webhooks=[],
-            registered_events=[],
+            registered_events=self.webhook_events,
         )
 
-    def delete_repository_webhook(self, repo_source_id, inactive_hook_id):
+    def register_azure_repository_subscription(self, azure_webhooks_endpoint, event_type, repo_source_id):
+        response = requests.post(
+            self.build_org_url(f'hooks/subscriptions'),
+            headers=self.get_post_headers(),
+            json=dict(
+                publisherId='tfs',
+                eventType=event_type,
+                consumerId='webHooks',
+                consumerActionId='httpRequest',
+                publisherInputs=dict(
+                    repository=repo_source_id,
+                ),
+                consumerInputs=dict(
+                    url=f"{azure_webhooks_endpoint}/{self.key}/"
+                )
+            )
+        )
+        if response.status_code == 200:
+            body = response.json()
+            return dict(
+                event_type=event_type,
+                subscription_id=body.get('id')
+            )
+        else:
+            return None
+
+    def delete_connector_webhooks(self, repo_source_id, inactive_hook_id):
         return True
 
 
