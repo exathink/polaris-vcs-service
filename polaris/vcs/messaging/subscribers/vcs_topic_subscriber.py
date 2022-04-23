@@ -162,12 +162,14 @@ class VcsTopicSubscriber(TopicSubscriber):
         organization_key = message['organization_key']
         repository_key = message['repository_key']
         pull_request_key = message.get('pull_request_key')
+        pull_request_source_id = message.get('pull_request_source_id')
 
         logger.info(
             f"Processing  {message.message_type}: "
             f" Organization Key : {organization_key}"
             f" Repository Key : {repository_key}"
             f" Pull Request Key : {pull_request_key}"
+            f" Pull Request Source Id: {pull_request_source_id}"
         )
 
         created_messages = []
@@ -176,7 +178,8 @@ class VcsTopicSubscriber(TopicSubscriber):
         try:
             for result in commands.sync_pull_requests(
                     repository_key,
-                    pull_request_key=pull_request_key
+                    pull_request_key=pull_request_key,
+                    pull_request_source_id=pull_request_source_id
             ):
                 if result['success']:
                     self.publish_sync_pull_request_responses(message, result['pull_requests'], created_messages,

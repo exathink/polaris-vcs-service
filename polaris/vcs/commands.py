@@ -61,30 +61,41 @@ def sync_repository_forks(connector_key, repository_key, join_this=None):
                 raise ProcessingException(f'Repository with key {repository_key} was not found')
 
 
-def sync_pull_requests(repository_key, pull_request_key=None):
+def sync_pull_requests(repository_key, pull_request_key=None, pull_request_source_id=None):
     log.info(f'Sync pull requests starting')
-    repository_provider = repository_factory.get_provider_impl(repository_key)
-    if repository_provider:
-
-        if pull_request_key is not None:
-            pull_request = api.find_pull_request(pull_request_key)
-            if pull_request is not None:
-                yield api.sync_pull_requests(
-                    repository_key,
-                    repository_provider.fetch_pull_requests_from_source(pull_request_source_id=pull_request.api_id)
-                )
-            else:
-                raise ProcessingException(f'Could not find pull request with key {pull_request_key}')
-        else:
+    if pull_request_key is not None or pull_request_source_id is not None:
+        yield from sync_pull_request(repository_key, pull_request_source_id, pull_request_key)
+    else:
+        repository_provider = repository_factory.get_provider_impl(repository_key)
+        if repository_provider:
             yield api.sync_pull_requests(
                 repository_key,
                 repository_provider.fetch_pull_requests_from_source()
             )
-    else:
-        return []
+
+    return []
 
 
+def sync_pull_request(repository_key, pull_request_source_id, pull_request_key):
+    log.info('Syncing single pull request')
+    repository_provider = repository_factory.get_provider_impl(repository_key)
+    if repository_provider:
+        pr_source_id = pull_request_source_id
+        if pull_request_source_id is None:
+            pull_request = api.find_pull_request(pull_request_key)
+            if pull_request is not None:
+                pr_source_id = pull_request.api_id
+            else:
+                raise ProcessingException(f'Could not find pull request with key {pull_request_key}')
 
+        yield api.sync_pull_requests(
+            repository_key,
+            repository_provider.fetch_pull_requests_from_source(
+                pull_request_source_id=pr_source_id
+            )
+        )
+
+    return []
 
 
 def register_repository_webhooks(connector_key, repository_key, join_this=None):

@@ -149,12 +149,13 @@ def pull_request_updated_event(organization_key, repository_key, pull_request_su
     )
 
 
-def sync_pull_request(organization_key, repository_key, pull_request_key, channel=None):
+def sync_pull_request(organization_key, repository_key, pull_request_key, pull_request_source_id=None, channel=None):
     message = SyncPullRequest(
         send=dict(
             organization_key=organization_key,
             repository_key=repository_key,
-            pull_request_key=pull_request_key
+            pull_request_key=pull_request_key,
+            pull_request_source_id=pull_request_source_id
         )
     )
     publish(

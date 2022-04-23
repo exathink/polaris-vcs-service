@@ -28,3 +28,4 @@ class SyncPullRequests(Command):
 
 class SyncPullRequest(SyncPullRequests):
     message_type = 'vcs.sync_pull_request'
+    pull_request_source_id = fields.String(required=False, allow_none=True)
