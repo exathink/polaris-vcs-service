@@ -30,7 +30,12 @@ class AzureRepositoriesConnector(AzureConnector):
                 'git.push',
                 'git.pullrequest.created',
                 'git.pullrequest.updated',
-                'git.pullrequest.merged'
+                # Note: we are explicitly NOT registering for
+                # merged notifications. It seems like Azure sends these
+                # notification on merge checks and this happens on creates and
+                # updates, so it seems like we get these as duplicate notifications.
+                # Ignoring them for now, and we can see if this causes some other unforseen
+                # use case to fail.
             ]
 
     def map_repository_info(self, repo):
@@ -228,7 +233,7 @@ class AzureRepository(PolarisAzureRepository):
             # some issues down the line, but it is the closest approx I can think of
             # for a valid last updated date in the absence of a reliable one from them.
             source_last_updated=datetime.utcnow() if closed_date is None else closed_date,
-            source_merge_status=pull_request['mergeStatus'],
+            source_merge_status=pull_request.get('mergeStatus'),
             source_merged_at=closed_date,
             source_closed_at=closed_date,
             end_date=closed_date,
