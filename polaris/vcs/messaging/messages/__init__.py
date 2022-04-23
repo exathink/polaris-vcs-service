@@ -15,6 +15,7 @@ from .atlassian_connect_repository_event import AtlassianConnectRepositoryEvent
 from .gitlab_repository_event import GitlabRepositoryEvent
 from .repository_push_event import RemoteRepositoryPushEvent
 from .github_repository_event import GithubRepositoryEvent
+from .azure_repository_event import AzureRepositoryEvent
 from .sync_pull_requests import SyncPullRequests, SyncPullRequest
 
 # Add this to the global message factory so that the messages can be desrialized on reciept.
@@ -22,6 +23,7 @@ register_messages([
     RemoteRepositoryPushEvent,
     GitlabRepositoryEvent,
     GithubRepositoryEvent,
+    AzureRepositoryEvent,
     AtlassianConnectRepositoryEvent,
     RefreshConnectorRepositories,
     SyncPullRequests,

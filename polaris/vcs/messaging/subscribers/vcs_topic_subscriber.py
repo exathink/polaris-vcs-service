@@ -13,7 +13,7 @@ import logging
 
 from polaris.messaging.topics import TopicSubscriber, VcsTopic
 from polaris.vcs.messaging.messages import AtlassianConnectRepositoryEvent, GitlabRepositoryEvent, \
-    RemoteRepositoryPushEvent, GithubRepositoryEvent, SyncPullRequests, SyncPullRequest
+    RemoteRepositoryPushEvent, GithubRepositoryEvent, SyncPullRequests, SyncPullRequest, AzureRepositoryEvent
 from polaris.messaging.messages import PullRequestsCreated, PullRequestsUpdated
 
 from polaris.messaging.utils import raise_message_processing_error
@@ -21,6 +21,8 @@ from polaris.vcs import commands
 from polaris.vcs.integrations.atlassian import bitbucket_message_handler
 from polaris.vcs.integrations.gitlab import gitlab_message_handler
 from polaris.vcs.integrations.github import github_message_handler
+from polaris.vcs.integrations.azure import azure_message_handler
+
 
 logger = logging.getLogger('polaris.vcs.messaging.vcs_topic_subscriber')
 
@@ -34,6 +36,7 @@ class VcsTopicSubscriber(TopicSubscriber):
                 AtlassianConnectRepositoryEvent,
                 GitlabRepositoryEvent,
                 GithubRepositoryEvent,
+                AzureRepositoryEvent,
                 RemoteRepositoryPushEvent,
                 SyncPullRequests,
                 SyncPullRequest
@@ -49,6 +52,8 @@ class VcsTopicSubscriber(TopicSubscriber):
             return self.process_gitlab_repository_event(message)
         elif GithubRepositoryEvent.message_type == message.message_type:
             return self.process_github_repository_event(message)
+        elif AzureRepositoryEvent.message_type == message.message_type:
+            return self.process_azure_repository_event(message)
         elif RemoteRepositoryPushEvent.message_type == message.message_type:
             return self.process_remote_repository_push_event(message)
 
@@ -91,6 +96,24 @@ class VcsTopicSubscriber(TopicSubscriber):
             )
         except Exception as exc:
             raise_message_processing_error(message, 'Failed to process gitlab repository event', str(exc))
+
+    @staticmethod
+    def process_azure_repository_event(message):
+        connector_key = message['connector_key']
+        event_type = message['event_type']
+        payload = message['payload']
+
+        logger.info(
+            f"Processing  azure event {message.message_type}: "
+        )
+        try:
+            return azure_message_handler.handle_azure_event(
+                connector_key,
+                event_type,
+                payload
+            )
+        except Exception as exc:
+            raise_message_processing_error(message, 'Failed to process azure repository event', str(exc))
 
     @staticmethod
     def process_github_repository_event(message):

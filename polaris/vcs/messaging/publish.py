@@ -9,7 +9,7 @@
 # Author: Krishna Kumar
 from polaris.messaging.messages import RepositoriesImported, PullRequestsUpdated, PullRequestsCreated
 from polaris.vcs.messaging.messages import RefreshConnectorRepositories, AtlassianConnectRepositoryEvent, \
-    GitlabRepositoryEvent, RemoteRepositoryPushEvent, GithubRepositoryEvent, SyncPullRequest
+    GitlabRepositoryEvent, RemoteRepositoryPushEvent, GithubRepositoryEvent, AzureRepositoryEvent, SyncPullRequest
 from polaris.messaging.utils import publish
 from polaris.messaging.topics import ConnectorsTopic, VcsTopic
 from polaris.integrations.publish import connector_event
@@ -75,6 +75,21 @@ def gitlab_repository_event(event_type, connector_key, payload, channel=None):
 
 def github_repository_event(event_type, connector_key, payload, channel=None):
     message = GithubRepositoryEvent(
+        send=dict(
+            event_type=event_type,
+            connector_key=connector_key,
+            payload=payload
+        )
+    )
+    publish(
+        VcsTopic,
+        message,
+        channel=channel
+    )
+    return message
+
+def azure_repository_event(event_type, connector_key, payload, channel=None):
+    message = AzureRepositoryEvent(
         send=dict(
             event_type=event_type,
             connector_key=connector_key,

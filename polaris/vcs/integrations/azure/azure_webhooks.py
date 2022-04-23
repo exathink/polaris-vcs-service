@@ -22,7 +22,9 @@ def repository_webhook(connector_key):
     logger.info('Received webhook event @repository/webhooks')
     req_data = request.json
     if req_data is not None:
-       logger.info(req_data)
+        publish.azure_repository_event(req_data.get('eventType'), connector_key, request.data)
+    else:
+        logger.error(f'Invalid webhook request: {request.text}')
 
     return ''
 
