@@ -143,12 +143,16 @@ class VcsTopicSubscriber(TopicSubscriber):
         try:
             result = commands.handle_remote_repository_push(connector_key, repository_source_id)
             if result.get('success'):
-                self.publish(VcsTopic, SyncPullRequests(
-                    send=dict(
-                        organization_key=result['organization_key'],
-                        repository_key=result['repository_key']
-                    )
-                ))
+                if not result.get('webhooks_registered') or result.get('pull_request_count') == 0:
+                    # When webhooks are registered we
+                    # only fetch pull requests on repo push when we have not seen any PRs so far.
+                    # Subsequently, we will get PRs via webhooks.
+                    self.publish(VcsTopic, SyncPullRequests(
+                        send=dict(
+                            organization_key=result['organization_key'],
+                            repository_key=result['repository_key']
+                        )
+                    ))
             return result
 
         except Exception as exc:

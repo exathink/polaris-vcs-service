@@ -266,11 +266,13 @@ def handle_remote_repository_push(session, connector_key, repository_source_id):
             log.info(f'Received repository push for organization {repo.organization_key} Repository {repo.name}')
             if repo.import_state == RepositoryImportState.CHECK_FOR_UPDATES:
                 repo.import_state = RepositoryImportState.UPDATE_READY
-
+            pull_request_count = repo.pull_request_count
             return dict(
                 success=True,
                 organization_key=repo.organization_key,
                 repository_key=repo.key,
+                pull_request_count=pull_request_count,
+                webhooks_registered=repo.webhooks_registered
             )
 
     # if the repo does not exist (ie it has not been fetched) or the repo is not in an imported state
