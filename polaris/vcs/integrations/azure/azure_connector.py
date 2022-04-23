@@ -29,6 +29,7 @@ class AzureRepositoriesConnector(AzureConnector):
         self.webhook_events = [
                 'git.push',
                 'git.pullrequest.created',
+                'git.pullrequest.updated',
                 'git.pullrequest.merged'
             ]
 
@@ -113,10 +114,12 @@ class AzureRepositoriesConnector(AzureConnector):
             self.register_azure_repository_subscription(azure_webhooks_endpoint, event_type, repo_source_id)
             for event_type in self.webhook_events
         ]
+        deleted_webhooks = self.delete_connector_webhooks(repo_source_id, registered_webhooks)
+
         return dict(
             success=True,
             active_webhook=active_webhooks,
-            deleted_webhooks=[],
+            deleted_webhooks=deleted_webhooks,
             registered_events=self.webhook_events,
         )
 
@@ -146,9 +149,27 @@ class AzureRepositoriesConnector(AzureConnector):
         else:
             return None
 
-    def delete_connector_webhooks(self, repo_source_id, inactive_hook_id):
-        return True
+    def delete_registered_webhook(self, repo_source_id, registered_webhook):
+        for subscription in registered_webhook:
+            self.delete_azure_repository_subscription(repo_source_id, subscription)
 
+    def delete_connector_webhooks(self, repo_source_id, registered_webhooks):
+        for registered_webhook in registered_webhooks:
+            self.delete_registered_webhook(repo_source_id, registered_webhook)
+        return registered_webhooks
+
+    def delete_azure_repository_subscription(self, repo_source_id, subscription):
+        response = requests.delete(
+            self.build_org_url(f"hooks/subscriptions/{subscription.get('subscription_id')}"),
+            headers=self.get_standard_headers(),
+        )
+        if not response.ok:
+            # we don't fail the overall process because the deletion of the existing subscription failed.
+            logger.error(f"Failed to delete subscription {subscription.get('subscription_id')} "
+                         f"for event type {subscription.get('event_type')} in"
+                         f"azure repository {repo_source_id}")
+
+        return response.ok
 
 class PolarisAzureRepository:
 
