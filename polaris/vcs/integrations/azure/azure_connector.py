@@ -26,6 +26,17 @@ class AzureRepositoriesConnector(AzureConnector):
 
     def __init__(self, connector):
         super().__init__(connector)
+        self.webhook_events = [
+                'git.push',
+                'git.pullrequest.created',
+                'git.pullrequest.updated',
+                # Note: we are explicitly NOT registering for
+                # merged notifications. It seems like Azure sends these
+                # notification on merge checks and this happens on creates and
+                # updates, so it seems like we get these as duplicate notifications.
+                # Ignoring them for now, and we can see if this causes some other unforseen
+                # use case to fail.
+            ]
 
     def map_repository_info(self, repo):
         return dict(
@@ -103,16 +114,67 @@ class AzureRepositoriesConnector(AzureConnector):
             f"Refresh Repositories: Fetched {count} repositories in total for connector {self.name} in organization {self.organization_key}")
 
     def register_repository_webhooks(self, repo_source_id, registered_webhooks):
+        azure_webhooks_endpoint = f'{config_provider.get("AZURE_WEBHOOKS_BASE_URL")}/repository/webhooks'
+        active_webhooks = [
+            self.register_azure_repository_subscription(azure_webhooks_endpoint, event_type, repo_source_id)
+            for event_type in self.webhook_events
+        ]
+        deleted_webhooks = self.delete_connector_webhooks(repo_source_id, registered_webhooks)
+
         return dict(
-            success=False,
-            active_webhook=None,
-            deleted_webhooks=[],
-            registered_events=[],
+            success=True,
+            active_webhook=active_webhooks,
+            deleted_webhooks=deleted_webhooks,
+            registered_events=self.webhook_events,
         )
 
-    def delete_repository_webhook(self, repo_source_id, inactive_hook_id):
-        return True
+    def register_azure_repository_subscription(self, azure_webhooks_endpoint, event_type, repo_source_id):
+        response = requests.post(
+            self.build_org_url(f'hooks/subscriptions'),
+            headers=self.get_post_headers(),
+            json=dict(
+                publisherId='tfs',
+                eventType=event_type,
+                consumerId='webHooks',
+                consumerActionId='httpRequest',
+                publisherInputs=dict(
+                    repository=repo_source_id,
+                ),
+                consumerInputs=dict(
+                    url=f"{azure_webhooks_endpoint}/{self.key}/"
+                )
+            )
+        )
+        if response.status_code == 200:
+            body = response.json()
+            return dict(
+                event_type=event_type,
+                subscription_id=body.get('id')
+            )
+        else:
+            return None
 
+    def delete_registered_webhook(self, repo_source_id, registered_webhook):
+        for subscription in registered_webhook:
+            self.delete_azure_repository_subscription(repo_source_id, subscription)
+
+    def delete_connector_webhooks(self, repo_source_id, registered_webhooks):
+        for registered_webhook in registered_webhooks:
+            self.delete_registered_webhook(repo_source_id, registered_webhook)
+        return registered_webhooks
+
+    def delete_azure_repository_subscription(self, repo_source_id, subscription):
+        response = requests.delete(
+            self.build_org_url(f"hooks/subscriptions/{subscription.get('subscription_id')}"),
+            headers=self.get_standard_headers(),
+        )
+        if not response.ok:
+            # we don't fail the overall process because the deletion of the existing subscription failed.
+            logger.error(f"Failed to delete subscription {subscription.get('subscription_id')} "
+                         f"for event type {subscription.get('event_type')} in"
+                         f"azure repository {repo_source_id}")
+
+        return response.ok
 
 class PolarisAzureRepository:
 
@@ -171,7 +233,7 @@ class AzureRepository(PolarisAzureRepository):
             # some issues down the line, but it is the closest approx I can think of
             # for a valid last updated date in the absence of a reliable one from them.
             source_last_updated=datetime.utcnow() if closed_date is None else closed_date,
-            source_merge_status=pull_request['mergeStatus'],
+            source_merge_status=pull_request.get('mergeStatus'),
             source_merged_at=closed_date,
             source_closed_at=closed_date,
             end_date=closed_date,

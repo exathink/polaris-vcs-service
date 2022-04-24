@@ -9,7 +9,7 @@
 # Author: Krishna Kumar
 from polaris.messaging.messages import RepositoriesImported, PullRequestsUpdated, PullRequestsCreated
 from polaris.vcs.messaging.messages import RefreshConnectorRepositories, AtlassianConnectRepositoryEvent, \
-    GitlabRepositoryEvent, RemoteRepositoryPushEvent, GithubRepositoryEvent, SyncPullRequest
+    GitlabRepositoryEvent, RemoteRepositoryPushEvent, GithubRepositoryEvent, AzureRepositoryEvent, SyncPullRequest
 from polaris.messaging.utils import publish
 from polaris.messaging.topics import ConnectorsTopic, VcsTopic
 from polaris.integrations.publish import connector_event
@@ -88,6 +88,21 @@ def github_repository_event(event_type, connector_key, payload, channel=None):
     )
     return message
 
+def azure_repository_event(event_type, connector_key, payload, channel=None):
+    message = AzureRepositoryEvent(
+        send=dict(
+            event_type=event_type,
+            connector_key=connector_key,
+            payload=payload
+        )
+    )
+    publish(
+        VcsTopic,
+        message,
+        channel=channel
+    )
+    return message
+
 
 def remote_repository_push_event(connector_key, repository_source_id, channel=None):
     message = RemoteRepositoryPushEvent(
@@ -134,12 +149,13 @@ def pull_request_updated_event(organization_key, repository_key, pull_request_su
     )
 
 
-def sync_pull_request(organization_key, repository_key, pull_request_key, channel=None):
+def sync_pull_request(organization_key, repository_key, pull_request_key, pull_request_source_id=None, channel=None):
     message = SyncPullRequest(
         send=dict(
             organization_key=organization_key,
             repository_key=repository_key,
-            pull_request_key=pull_request_key
+            pull_request_key=pull_request_key,
+            pull_request_source_id=pull_request_source_id
         )
     )
     publish(
