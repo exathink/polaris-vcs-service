@@ -13,7 +13,7 @@ import logging
 
 from polaris.messaging.topics import TopicSubscriber, VcsTopic
 from polaris.vcs.messaging.messages import AtlassianConnectRepositoryEvent, GitlabRepositoryEvent, \
-    RemoteRepositoryPushEvent, GithubRepositoryEvent, SyncPullRequests, SyncPullRequest
+    RemoteRepositoryPushEvent, GithubRepositoryEvent, SyncPullRequests, SyncPullRequest, AzureRepositoryEvent
 from polaris.messaging.messages import PullRequestsCreated, PullRequestsUpdated
 
 from polaris.messaging.utils import raise_message_processing_error
@@ -21,6 +21,8 @@ from polaris.vcs import commands
 from polaris.vcs.integrations.atlassian import bitbucket_message_handler
 from polaris.vcs.integrations.gitlab import gitlab_message_handler
 from polaris.vcs.integrations.github import github_message_handler
+from polaris.vcs.integrations.azure import azure_message_handler
+
 
 logger = logging.getLogger('polaris.vcs.messaging.vcs_topic_subscriber')
 
@@ -34,6 +36,7 @@ class VcsTopicSubscriber(TopicSubscriber):
                 AtlassianConnectRepositoryEvent,
                 GitlabRepositoryEvent,
                 GithubRepositoryEvent,
+                AzureRepositoryEvent,
                 RemoteRepositoryPushEvent,
                 SyncPullRequests,
                 SyncPullRequest
@@ -49,6 +52,8 @@ class VcsTopicSubscriber(TopicSubscriber):
             return self.process_gitlab_repository_event(message)
         elif GithubRepositoryEvent.message_type == message.message_type:
             return self.process_github_repository_event(message)
+        elif AzureRepositoryEvent.message_type == message.message_type:
+            return self.process_azure_repository_event(message)
         elif RemoteRepositoryPushEvent.message_type == message.message_type:
             return self.process_remote_repository_push_event(message)
 
@@ -93,6 +98,24 @@ class VcsTopicSubscriber(TopicSubscriber):
             raise_message_processing_error(message, 'Failed to process gitlab repository event', str(exc))
 
     @staticmethod
+    def process_azure_repository_event(message):
+        connector_key = message['connector_key']
+        event_type = message['event_type']
+        payload = message['payload']
+
+        logger.info(
+            f"Processing  azure event {message.message_type}: "
+        )
+        try:
+            return azure_message_handler.handle_azure_event(
+                connector_key,
+                event_type,
+                payload
+            )
+        except Exception as exc:
+            raise_message_processing_error(message, 'Failed to process azure repository event', str(exc))
+
+    @staticmethod
     def process_github_repository_event(message):
         connector_key = message['connector_key']
         event_type = message['event_type']
@@ -120,12 +143,16 @@ class VcsTopicSubscriber(TopicSubscriber):
         try:
             result = commands.handle_remote_repository_push(connector_key, repository_source_id)
             if result.get('success'):
-                self.publish(VcsTopic, SyncPullRequests(
-                    send=dict(
-                        organization_key=result['organization_key'],
-                        repository_key=result['repository_key']
-                    )
-                ))
+                if not result.get('webhooks_registered') or result.get('pull_request_count') == 0:
+                    # When webhooks are registered we
+                    # only fetch pull requests on repo push when we have not seen any PRs so far.
+                    # Subsequently, we will get PRs via webhooks.
+                    self.publish(VcsTopic, SyncPullRequests(
+                        send=dict(
+                            organization_key=result['organization_key'],
+                            repository_key=result['repository_key']
+                        )
+                    ))
             return result
 
         except Exception as exc:
@@ -135,12 +162,14 @@ class VcsTopicSubscriber(TopicSubscriber):
         organization_key = message['organization_key']
         repository_key = message['repository_key']
         pull_request_key = message.get('pull_request_key')
+        pull_request_source_id = message.get('pull_request_source_id')
 
         logger.info(
             f"Processing  {message.message_type}: "
             f" Organization Key : {organization_key}"
             f" Repository Key : {repository_key}"
             f" Pull Request Key : {pull_request_key}"
+            f" Pull Request Source Id: {pull_request_source_id}"
         )
 
         created_messages = []
@@ -149,7 +178,8 @@ class VcsTopicSubscriber(TopicSubscriber):
         try:
             for result in commands.sync_pull_requests(
                     repository_key,
-                    pull_request_key=pull_request_key
+                    pull_request_key=pull_request_key,
+                    pull_request_source_id=pull_request_source_id
             ):
                 if result['success']:
                     self.publish_sync_pull_request_responses(message, result['pull_requests'], created_messages,
