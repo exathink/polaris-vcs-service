@@ -40,7 +40,7 @@ class AzureRepositoriesConnector(AzureConnector):
 
     def map_repository_info(self, repo):
         return dict(
-            name=repo.get('name') if not repo.get('isFork') else f"<- {repo.name}",
+            name=repo.get('name') if not repo.get('isFork') else f"<- {repo.get('name')}",
             url=repo.get('webUrl'),
             public=False,
             vendor='git',
