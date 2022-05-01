@@ -145,13 +145,15 @@ class AzureRepositoriesConnector(AzureConnector):
                 )
             )
         )
-        if response.status_code == 200:
+        if response.ok:
             body = response.json()
             return dict(
                 event_type=event_type,
                 subscription_id=body.get('id')
             )
         else:
+            logger.error(f"Failed to register an azure subscription for azure connector {event_type} repo: {repo_source_id}")
+            logger.error(f"Service responded with status {response.status_code}: {response.text}")
             return None
 
     def delete_registered_webhook(self, repo_source_id, registered_webhook):
