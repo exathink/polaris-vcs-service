@@ -14,8 +14,9 @@ import logging
 from polaris.messaging.topics import TopicSubscriber, VcsTopic
 from polaris.vcs.messaging.messages import AtlassianConnectRepositoryEvent, GitlabRepositoryEvent, \
     RemoteRepositoryPushEvent, GithubRepositoryEvent, SyncPullRequests, SyncPullRequest, AzureRepositoryEvent
-from polaris.messaging.messages import PullRequestsCreated, PullRequestsUpdated
+from polaris.messaging.messages import PullRequestsCreated, PullRequestsUpdated, RepositoriesImported
 
+from polaris.vcs.messaging import publish
 from polaris.messaging.utils import raise_message_processing_error
 from polaris.vcs import commands
 from polaris.vcs.integrations.atlassian import bitbucket_message_handler
@@ -38,6 +39,7 @@ class VcsTopicSubscriber(TopicSubscriber):
                 GithubRepositoryEvent,
                 AzureRepositoryEvent,
                 RemoteRepositoryPushEvent,
+                RepositoriesImported,
                 SyncPullRequests,
                 SyncPullRequest
             ],
@@ -56,7 +58,8 @@ class VcsTopicSubscriber(TopicSubscriber):
             return self.process_azure_repository_event(message)
         elif RemoteRepositoryPushEvent.message_type == message.message_type:
             return self.process_remote_repository_push_event(message)
-
+        elif RepositoriesImported.message_type == message.message_type:
+            return self.process_repositories_imported_event(message)
         elif message.message_type in [SyncPullRequest.message_type, SyncPullRequests.message_type]:
             return self.process_sync_pull_requests(message)
 
@@ -140,23 +143,26 @@ class VcsTopicSubscriber(TopicSubscriber):
         logger.info(
             f"Processing  repository push event for connector {connector_key} "
         )
-        try:
-            result = commands.handle_remote_repository_push(connector_key, repository_source_id)
-            if result.get('success'):
-                if not result.get('webhooks_registered') or result.get('pull_request_count') == 0:
-                    # When webhooks are registered we
-                    # only fetch pull requests on repo push when we have not seen any PRs so far.
-                    # Subsequently, we will get PRs via webhooks.
-                    self.publish(VcsTopic, SyncPullRequests(
-                        send=dict(
-                            organization_key=result['organization_key'],
-                            repository_key=result['repository_key']
-                        )
-                    ))
-            return result
 
+        try:
+            return commands.handle_remote_repository_push(connector_key, repository_source_id)
         except Exception as exc:
             raise_message_processing_error(message, 'Failed to process repository push event', str(exc))
+
+    def process_repositories_imported_event(self, message):
+        organization_key = message['organization_key']
+        repositories = message['imported_repositories']
+
+        logger.info(f"Processing Repositories Imported {organization_key} with {len(repositories)} repos")
+        for repository in repositories:
+            self.publish(
+                VcsTopic, SyncPullRequests(
+                    send=dict(
+                        organization_key=organization_key,
+                        repository_key=repository['key']
+                    )
+                )
+            )
 
     def process_sync_pull_requests(self, message):
         organization_key = message['organization_key']

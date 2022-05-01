@@ -11,7 +11,10 @@
 import logging
 
 from polaris.messaging.topics import TopicSubscriber, CommitsTopic
-
+from polaris.messaging.messages import CommitHistoryImported
+from polaris.messaging.utils import raise_on_failure
+from polaris.vcs.db import api
+from polaris.vcs.messaging import publish
 logger = logging.getLogger('polaris.vcs.messaging.commits_topic_subscriber')
 
 
@@ -21,13 +24,24 @@ class CommitsTopicSubscriber(TopicSubscriber):
             topic=CommitsTopic(channel, create=True),
             subscriber_queue='commits_vcs',
             message_classes=[
-
+                CommitHistoryImported
             ],
             publisher=publisher,
             exclusive=False
         )
 
     def dispatch(self, channel, message):
-        pass
+        if CommitHistoryImported.message_type == message.message_type:
+            return self.process_commit_history_imported(message)
 
+    @staticmethod
+    def process_commit_history_imported(message):
+        commit_history_imported = message.dict
 
+        organization_key = commit_history_imported.get('organization_key')
+        repository_key = commit_history_imported.get('repository_key')
+        logger.info(f"Process commits created organization {organization_key} repository {repository_key}")
+
+        repository = api.find_repository(repository_key)
+        if repository and not repository.webhooks_registered:
+            publish.sync_pull_request(organization_key, repository_key)

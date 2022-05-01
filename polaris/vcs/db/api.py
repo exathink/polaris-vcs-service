@@ -66,15 +66,26 @@ def get_pull_requests_to_sync_with_analytics(before=None, days=1, limit=100):
         return db.failure_message('Get Pull Requests to Sync with Analytics', e)
 
 
-def find_pull_request(pull_request_key):
+def find_pull_request(pull_request_key, join_this=None):
     try:
-        with db.orm_session() as session:
+        with db.orm_session(join_this) as session:
             return pull_requests.find_pull_request(session, pull_request_key)
 
     except SQLAlchemyError as exc:
         return db.process_exception("Find Pull Request", exc)
     except Exception as e:
         return db.failure_message('Find Pull Request', e)
+
+
+def find_repository(repository_key, join_this=None):
+    try:
+        with db.orm_session(join_this) as session:
+            return repositories.find_repository(session, repository_key)
+
+    except SQLAlchemyError as exc:
+        return db.process_exception("Find Repository", exc)
+    except Exception as e:
+        return db.failure_message('Find Repository', e)
 
 
 def register_webhooks(repository_key, webhook_info, join_this=None):

@@ -280,3 +280,7 @@ def handle_remote_repository_push(session, connector_key, repository_source_id):
     return dict(
         success=False
     )
+
+
+def find_repository(session, repository_key):
+    return Repository.find_by_repository_key(session, repository_key)
