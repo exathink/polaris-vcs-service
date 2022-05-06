@@ -14,6 +14,7 @@ from polaris.messaging.topics import TopicSubscriber, CommitsTopic
 from polaris.messaging.messages import CommitHistoryImported
 from polaris.messaging.utils import raise_on_failure
 from polaris.vcs.db import api
+from polaris.common import db
 from polaris.vcs.messaging import publish
 logger = logging.getLogger('polaris.vcs.messaging.commits_topic_subscriber')
 
@@ -42,6 +43,7 @@ class CommitsTopicSubscriber(TopicSubscriber):
         repository_key = commit_history_imported.get('repository_key')
         logger.info(f"Process commits created organization {organization_key} repository {repository_key}")
 
-        repository = api.find_repository(repository_key)
-        if repository and not repository.webhooks_registered:
-            publish.sync_pull_request(organization_key, repository_key)
+        with db.orm_session() as session:
+            repository = api.find_repository(repository_key, join_this=session)
+            if repository and not repository.webhooks_registered:
+                publish.sync_pull_request(organization_key, repository_key)
