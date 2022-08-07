@@ -261,8 +261,8 @@ class GitlabRepository(PolarisGitlabRepository):
                 f"Fetch pull requests failed {response.text} status: {response.status_code}\n"
             )
 
-    def fetch_pull_requests_from_source(self, source_id=None):
-        if source_id is None:
+    def fetch_pull_requests_from_source(self, pull_request_source_id=None):
+        if pull_request_source_id is None:
             for pull_requests in self.fetch_pull_requests():
                 yield [
                     self.map_pull_request_info(pr)
@@ -270,7 +270,7 @@ class GitlabRepository(PolarisGitlabRepository):
                 ]
         else:
             yield [
-                self.map_pull_request_info(self.get_pull_request(source_id))
+                self.map_pull_request_info(self.get_pull_request(pull_request_source_id))
             ]
 
     def fetch_repository_forks(self):
