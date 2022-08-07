@@ -179,12 +179,29 @@ class GitlabRepository(PolarisGitlabRepository):
         self.repo_url=f"{self.base_url}/projects/{self.source_repo_id}"
 
     def map_pull_request_info(self, pull_request):
+        pr_merged_at = None
+        pr_closed_at = None
         if pull_request.get('merged_at') is not None:
-            pr_end_date = pull_request.get('merged_at')
+            pr_merged_at = pr_end_date = pull_request.get('merged_at')
+
         elif pull_request.get('closed_at') is not None:
-            pr_end_date = pull_request.get('closed_at')
+            pr_closed_at = pr_end_date = pull_request.get('closed_at')
+
+        elif pull_request.get('state') in ['merged', 'closed']:
+            # we are adding this as a fallback since Gitlab has a
+            # standing open bug where merged_at and closed_at fields
+            # don't get populated even though the state is merged/closed.
+            # we are using the updated_at date here as a proxy for these values under the
+            # assumption that the updated_at date corresponding to the transition date is the right date to
+            # use for this.
+            pr_end_date = pull_request.get('updated_at')
+            if pull_request.get('state') == 'merged':
+                pr_merged_at = pull_request.get('updated_at')
+            if pull_request.get('state') == 'closed':
+                pr_closed_at = pull_request.get('updated_at')
         else:
             pr_end_date = None
+
         return dict(
             source_id=pull_request.get('id'),
             source_display_id=pull_request.get('iid'),
@@ -195,8 +212,8 @@ class GitlabRepository(PolarisGitlabRepository):
             source_created_at=pull_request.get('created_at'),
             source_last_updated=pull_request.get('updated_at'),
             source_merge_status=pull_request.get('merge_status'),
-            source_merged_at=pull_request.get('merged_at'),
-            source_closed_at=pull_request.get('closed_at'),
+            source_merged_at=pr_merged_at,
+            source_closed_at=pr_closed_at,
             end_date=pr_end_date,
             source_branch=pull_request.get('source_branch'),
             target_branch=pull_request.get('target_branch'),
