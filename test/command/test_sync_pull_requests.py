@@ -153,6 +153,183 @@ class TestSyncGitlabPullRequests:
         mapped_pr = repository_provider.map_pull_request_info(gitlab_fetched_pr)
         assert mapped_pr == expected_mapped_pr
 
+    class TestGitlabPRDateHandling:
+
+        def it_maps_end_dates_and_state_when_pr_is_open(self, setup_sync_repos_gitlab):
+            _, _ = setup_sync_repos_gitlab
+            repository_key = test_repository_key
+            gitlab_fetched_pr = {
+                "id": 61296045,
+                "iid": 69,
+                "project_id": 5419303,
+                "title": "PO-178 Graphql API updates.",
+                "description": "PO-178",
+                "state": "opened",
+                "created_at": "2020-06-11T18:56:59.410Z",
+                "updated_at": "2020-06-11T18:57:08.777Z",
+                "merged_by": {
+                    "id": 1438125,
+                    "name": "Krishna Kumar",
+                    "username": "krishnaku",
+                    "state": "active",
+                    "avatar_url": "https://secure.gravatar.com/avatar/ff19230d4b6d9a5d7d441dc62fec4619?s=80&d=identicon",
+                    "web_url": "https://gitlab.com/krishnaku"
+                },
+                "merged_at": None,
+                "closed_by": None,
+                "closed_at": None,
+                "target_branch": "master",
+                "source_branch": "PO-178",
+                "web_url": "https://gitlab.com/polaris-services/polaris-analytics-service/-/merge_requests/69"
+            }
+            repository_provider = repository_factory.get_provider_impl(repository_key)
+            mapped_pr = repository_provider.map_pull_request_info(gitlab_fetched_pr)
+            assert mapped_pr['end_date'] is None
+            assert mapped_pr['state'] == 'open'
+            assert mapped_pr['source_merged_at'] is None
+            assert mapped_pr['source_closed_at'] is None
+            assert mapped_pr['source_last_updated'] is not None
+
+        def it_maps_end_dates_and_state_when_pr_is_merged_and_merged_at_is_provided(self, setup_sync_repos_gitlab):
+            _, _ = setup_sync_repos_gitlab
+            repository_key = test_repository_key
+            gitlab_fetched_pr = {
+                "id": 61296045,
+                "iid": 69,
+                "project_id": 5419303,
+                "title": "PO-178 Graphql API updates.",
+                "description": "PO-178",
+                "state": "merged",
+                "created_at": "2020-06-11T18:56:59.410Z",
+                "updated_at": "2020-06-11T18:57:08.777Z",
+                "merged_by": {
+                    "id": 1438125,
+                    "name": "Krishna Kumar",
+                    "username": "krishnaku",
+                    "state": "active",
+                    "avatar_url": "https://secure.gravatar.com/avatar/ff19230d4b6d9a5d7d441dc62fec4619?s=80&d=identicon",
+                    "web_url": "https://gitlab.com/krishnaku"
+                },
+                "merged_at": "2020-06-11T18:57:08.777Z",
+                "closed_by": None,
+                "closed_at": None,
+                "target_branch": "master",
+                "source_branch": "PO-178",
+                "web_url": "https://gitlab.com/polaris-services/polaris-analytics-service/-/merge_requests/69"
+            }
+            repository_provider = repository_factory.get_provider_impl(repository_key)
+            mapped_pr = repository_provider.map_pull_request_info(gitlab_fetched_pr)
+            assert mapped_pr['end_date'] is not None
+            assert mapped_pr['state'] == 'merged'
+            assert mapped_pr['source_merged_at'] is not None
+            assert mapped_pr['source_closed_at'] is None
+            assert mapped_pr['source_last_updated'] is not None
+
+        def it_maps_end_dates_and_state_when_pr_is_merged_and_merged_at_is__not_provided(self, setup_sync_repos_gitlab):
+            _, _ = setup_sync_repos_gitlab
+            repository_key = test_repository_key
+            gitlab_fetched_pr = {
+                "id": 61296045,
+                "iid": 69,
+                "project_id": 5419303,
+                "title": "PO-178 Graphql API updates.",
+                "description": "PO-178",
+                "state": "merged",
+                "created_at": "2020-06-11T18:56:59.410Z",
+                "updated_at": "2020-06-11T18:57:08.777Z",
+                "merged_by": {
+                    "id": 1438125,
+                    "name": "Krishna Kumar",
+                    "username": "krishnaku",
+                    "state": "active",
+                    "avatar_url": "https://secure.gravatar.com/avatar/ff19230d4b6d9a5d7d441dc62fec4619?s=80&d=identicon",
+                    "web_url": "https://gitlab.com/krishnaku"
+                },
+                "merged_at": None,
+                "closed_by": None,
+                "closed_at": None,
+                "target_branch": "master",
+                "source_branch": "PO-178",
+                "web_url": "https://gitlab.com/polaris-services/polaris-analytics-service/-/merge_requests/69"
+            }
+            repository_provider = repository_factory.get_provider_impl(repository_key)
+            mapped_pr = repository_provider.map_pull_request_info(gitlab_fetched_pr)
+            assert mapped_pr['end_date'] is not None
+            assert mapped_pr['state'] == 'merged'
+            assert mapped_pr['source_merged_at'] is not None
+            assert mapped_pr['source_closed_at'] is None
+            assert mapped_pr['source_last_updated'] is not None
+
+        def it_maps_end_dates_and_state_when_pr_is_closed_and_closed_at_is_provided(self, setup_sync_repos_gitlab):
+            _, _ = setup_sync_repos_gitlab
+            repository_key = test_repository_key
+            gitlab_fetched_pr = {
+                "id": 61296045,
+                "iid": 69,
+                "project_id": 5419303,
+                "title": "PO-178 Graphql API updates.",
+                "description": "PO-178",
+                "state": "closed",
+                "created_at": "2020-06-11T18:56:59.410Z",
+                "updated_at": "2020-06-11T18:57:08.777Z",
+                "merged_by": {
+                    "id": 1438125,
+                    "name": "Krishna Kumar",
+                    "username": "krishnaku",
+                    "state": "active",
+                    "avatar_url": "https://secure.gravatar.com/avatar/ff19230d4b6d9a5d7d441dc62fec4619?s=80&d=identicon",
+                    "web_url": "https://gitlab.com/krishnaku"
+                },
+                "merged_at": None,
+                "closed_by": None,
+                "closed_at": "2020-06-11T18:57:08.777Z",
+                "target_branch": "master",
+                "source_branch": "PO-178",
+                "web_url": "https://gitlab.com/polaris-services/polaris-analytics-service/-/merge_requests/69"
+            }
+            repository_provider = repository_factory.get_provider_impl(repository_key)
+            mapped_pr = repository_provider.map_pull_request_info(gitlab_fetched_pr)
+            assert mapped_pr['end_date'] is not None
+            assert mapped_pr['state'] == 'closed'
+            assert mapped_pr['source_merged_at'] is None
+            assert mapped_pr['source_closed_at'] is not None
+            assert mapped_pr['source_last_updated'] is not None
+
+        def it_maps_end_dates_and_state_when_pr_is_closed_and_closed_at_is__not_provided(self, setup_sync_repos_gitlab):
+            _, _ = setup_sync_repos_gitlab
+            repository_key = test_repository_key
+            gitlab_fetched_pr = {
+                "id": 61296045,
+                "iid": 69,
+                "project_id": 5419303,
+                "title": "PO-178 Graphql API updates.",
+                "description": "PO-178",
+                "state": "closed",
+                "created_at": "2020-06-11T18:56:59.410Z",
+                "updated_at": "2020-06-11T18:57:08.777Z",
+                "merged_by": {
+                    "id": 1438125,
+                    "name": "Krishna Kumar",
+                    "username": "krishnaku",
+                    "state": "active",
+                    "avatar_url": "https://secure.gravatar.com/avatar/ff19230d4b6d9a5d7d441dc62fec4619?s=80&d=identicon",
+                    "web_url": "https://gitlab.com/krishnaku"
+                },
+                "merged_at": None,
+                "closed_by": None,
+                "closed_at": None,
+                "target_branch": "master",
+                "source_branch": "PO-178",
+                "web_url": "https://gitlab.com/polaris-services/polaris-analytics-service/-/merge_requests/69"
+            }
+            repository_provider = repository_factory.get_provider_impl(repository_key)
+            mapped_pr = repository_provider.map_pull_request_info(gitlab_fetched_pr)
+            assert mapped_pr['end_date'] is not None
+            assert mapped_pr['state'] == 'closed'
+            assert mapped_pr['source_merged_at'] is None
+            assert mapped_pr['source_closed_at'] is not None
+            assert mapped_pr['source_last_updated'] is not None
+
 
 class DictToObj(object):
     def __init__(self, d):
