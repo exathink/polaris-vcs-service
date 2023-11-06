@@ -8,13 +8,13 @@ Babel==2.9.1
 bcrypt==3.1.4
 blinker==1.4
 Brotli==1.0.9
-certifi==2022.6.15
+certifi==2023.7.22
 cffi==1.15.0
 charset-normalizer==2.0.10
 click==7.1.2
 coverage==6.3
 cryptography==2.6.1
-Deprecated==1.2.13
+Deprecated==1.2.14
 Flask==1.1.4
 Flask-Admin==1.5.8
 Flask-AtlassianConnect==0.0.5
@@ -33,7 +33,7 @@ Flask-WTF==1.0.0
 graphene==2.1.9
 graphql-core==2.3.2
 graphql-relay==2.0.1
-idna==3.3
+idna==3.4
 iniconfig==1.1.1
 itsdangerous==1.1.0
 Jinja2==2.11.3
@@ -43,7 +43,7 @@ marshmallow==2.21.0
 packaging==21.3
 passlib==1.7.4
 pika==0.12.0
-pluggy==1.0.0
+pluggy==1.2.0
 polaris-auth-db @ file:///project/polaris-flask/polaris-auth-db
 polaris-common-db @ file:///project/polaris-integrations/polaris-common-db
 polaris-flask @ file:///project/polaris-flask
@@ -66,7 +66,7 @@ pytest-cov==3.0.0
 python-dateutil==2.8.2
 python-editor==1.0.4
 pytz==2021.3
-requests==2.28.1
+requests==2.31.0
 Rx==1.6.1
 six==1.16.0
 speaklater==1.3
@@ -75,7 +75,7 @@ SQLAlchemy-Utils==0.38.2
 toml==0.10.2
 tomli==2.0.0
 urllib3==1.26.8
-uWSGI==2.0.17
+uWSGI==2.0.20
 Werkzeug==0.16.1
 wrapt==1.13.3
 WTForms==2.2
