@@ -25,20 +25,20 @@ class BitBucketConnectorContext:
     base_url = config_provider.get('BITBUCKET_CONNECTOR_BASE_URL')
     mount_path = None
 
-    app_name = "Polaris Flow Connector for BitBucket"
-    addon_name = "Polaris Flow Connector for BitBucket"
+    app_name = "Polaris Flow Connector for Bitbucket"
+    addon_name = "Polaris Flow Connector for Bitbucket"
     addon_key = config_provider.get('BITBUCKET_CONNECTOR_APP_KEY')
     if addon_key is None:
         raise ConfigurationException("BITBUCKET_CONNECTOR_APP_KEY must be specified")
 
-    addon_description = "Polaris Flow Connector for BitBucket"
+    addon_description = "Polaris Flow Connector for Bitbucket"
     addon_scopes = ['repository', 'issue', 'pullrequest', 'webhook']
     addon_version = 1
     api_migrations = None
 
 
 def init_connector(app):
-    log.info("Initializing Atlassian Connector for BitBucket")
+    log.info("Initializing Atlassian Connector for Bitbucket")
 
     ac = PolarisAtlassianConnect(app, connector_context=BitBucketConnectorContext)
 
