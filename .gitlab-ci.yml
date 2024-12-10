@@ -38,15 +38,6 @@ test:
   script:
     - package test-package
 
-push:
-  stage: push
-  only:
-    - master
-    - production
-  tags:
-    - polaris-runner
-  script:
-    - package push
 
 cleanup:
   only:
