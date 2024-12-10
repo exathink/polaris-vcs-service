@@ -13,7 +13,6 @@ before_script:
 stages:
   - build
   - test
-  - push
   - cleanup
   - deploy
 
@@ -39,15 +38,6 @@ test:
   script:
     - package test-package
 
-push:
-  stage: push
-  only:
-    - master
-    - production
-  tags:
-    - polaris-runner
-  script:
-    - package push
 
 cleanup:
   only:
